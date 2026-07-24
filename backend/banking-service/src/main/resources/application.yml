@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: ebankingsystem
+  datasource:
+    url: jdbc:mysql://ebankingsystemdb-1001-ebankingsystemdb.g.aivencloud.com:27032/ebankingsystem?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: update
