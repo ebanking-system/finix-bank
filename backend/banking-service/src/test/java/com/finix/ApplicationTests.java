@@ -1,4 +1,4 @@
-package com.backend;
+package com.finix;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
