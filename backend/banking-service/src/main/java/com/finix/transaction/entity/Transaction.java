@@ -1,7 +1,7 @@
-package com.ebs.transaction.entity;
+package com.finix.transaction.entity;
 
-import com.ebs.account.entity.Account;
-import com.ebs.common.entity.meta.BaseEntity;
+import com.finix.account.entity.Account;
+import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

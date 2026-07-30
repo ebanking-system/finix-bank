@@ -1,7 +1,6 @@
-package com.ebs.customer.entity;
+package com.finix.customer.entity;
 
-import com.ebs.auth.entity.User;
-import com.ebs.common.entity.meta.BaseEntity;
+import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +8,8 @@ import lombok.*;
 
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

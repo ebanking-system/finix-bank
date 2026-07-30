@@ -1,13 +1,14 @@
-package com.ebs.auth.entity;
+package com.finix.auth.entity;
 
-import com.ebs.common.entity.meta.BaseEntity;
+import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -35,5 +36,6 @@ public class User extends BaseEntity {
     private Role role;
 
     @Column(name = "must_change_password", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Builder.Default
     private Boolean mustChangePassword = false;
 }

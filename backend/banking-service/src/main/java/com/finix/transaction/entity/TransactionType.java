@@ -1,4 +1,4 @@
-package com.ebs.transaction.entity;
+package com.finix.transaction.entity;
 
 public enum TransactionType {
     DEPOSIT, WITHDRAWAL, TRANSFER

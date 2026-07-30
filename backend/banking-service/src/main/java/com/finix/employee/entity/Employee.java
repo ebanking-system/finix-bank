@@ -1,13 +1,13 @@
-package com.ebs.employee.entity;
+package com.finix.employee.entity;
 
-import com.ebs.auth.entity.User;
-import com.ebs.common.entity.meta.BaseEntity;
+import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

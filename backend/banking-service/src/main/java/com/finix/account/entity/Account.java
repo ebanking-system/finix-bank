@@ -1,6 +1,6 @@
 package com.finix.account.entity;
 
-import com.finix.common.entity.meta.BaseEntity;
+import com.finix.common.entity.BaseEntity;
 import com.finix.customer.entity.Customer;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
