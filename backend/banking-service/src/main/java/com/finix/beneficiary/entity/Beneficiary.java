@@ -1,7 +1,7 @@
-package com.ebs.beneficiary.entity;
+package com.finix.beneficiary.entity;
 
-import com.ebs.common.entity.meta.BaseEntity;
-import com.ebs.customer.entity.Customer;
+import com.finix.common.entity.meta.BaseEntity;
+import com.finix.customer.entity.Customer;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
