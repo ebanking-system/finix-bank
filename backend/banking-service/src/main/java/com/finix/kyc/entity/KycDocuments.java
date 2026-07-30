@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CurrentTimestamp;
 
+import com.finix.customer.entity.Customer;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +13,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NegativeOrZero;
 import lombok.AllArgsConstructor;
@@ -30,17 +34,23 @@ public class KycDocuments {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	// customerId should be here 
-	// + 
-	// specify association relationship here
+	
+	@OneToMany
+	@JoinColumn(name="customer_id")
+	private Customer customer;
+
 	@Column(name="aadhar_number", nullable = false, unique = true)
 	private String aadharNum;
+	
 	@Column(name="pan_num", nullable = false, unique= true)
 	private String panNum;
+	
 	@Column(name="self_image", nullable = false)
 	private String selfImage;
+	
 	@Enumerated(EnumType.STRING)
 	private Status status;
+	
 	@CurrentTimestamp
 	@Column(name="submitted_date")
 	private LocalDateTime submittedDate;

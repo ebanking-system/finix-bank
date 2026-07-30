@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CurrentTimestamp;
 
+import com.finix.account.entity.Account;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +14,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -31,7 +36,11 @@ public class FixedDeposits {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long fdId;
-//  accountId comes here
+
+	@ManyToMany
+	@JoinColumn(name="account_id")
+	private Account account;
+	
 	@Column(name = "deposit_amount", nullable = false)
 	private DecimalFormat depositAmount;
 	@Column(name = "interest_rate")

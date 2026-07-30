@@ -4,15 +4,9 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CurrentTimestamp;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-//import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import com.finix.account.entity.Account;
+
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,43 +15,51 @@ import lombok.ToString;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Setter
 @Getter
+@Setter
 @ToString
 @Entity
-@Table(name ="cards")
+@Table(name = "cards")
 public class Cards {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)	
-	private Long cardId;
-	// accountId comes here 
-	// association relationship here
-	@Column(name = "card_holder_name", nullable = false)
-	private String cardHolderName;
-	@Column(name = "card_number")
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private String cardNum;
-	@Column(name = "card_type", nullable = false)
-	@Enumerated(EnumType.STRING)
-	private CardType cardType;
-	@Column(name = "cvv")
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private String Cvv;
-	@Column(name = "issue_date")
-	@CurrentTimestamp
-	private LocalDateTime issueDate;
-	@Column(name = "expiry_date")
-	private LocalDateTime expiryDate;
-	@Enumerated(EnumType.STRING)
-	private Status status;
-	
-//  this below method is for handling expiry date of card, commenting this because 
-//  writing this in the service layer is better approach
-//	@PrePersist
-//	public void prePersist() {
-//		this.issueDate = LocalDateTime.now();
-//		this.expiryDate = issueDate.plusYears(5);
-//	}
-	
-	
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "card_id")
+    private Long cardId;
+    
+    @ManyToOne
+    @JoinColumn(name = "account_id")
+    private Account account;
+
+    @Column(name = "card_holder_name", nullable = false)
+    private String cardHolderName;
+
+    @Column(name = "card_number", nullable = false, unique = true, length = 16)
+    private String cardNum;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "card_type", nullable = false)
+    private CardType cardType;
+
+    @Column(name = "cvv", nullable = false, length = 3)
+    private String cvv;
+
+    @CurrentTimestamp
+    @Column(name = "issue_date", nullable = false)
+    private LocalDateTime issueDate;
+
+    @Column(name = "expiry_date", nullable = false)
+    private LocalDateTime expiryDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private Status status;
+    
+	//this below method is for handling expiry date of card, commenting this because 
+	//writing this in the service layer is better approach
+	//	@PrePersist
+	//	public void prePersist() {
+	//		this.issueDate = LocalDateTime.now();
+	//		this.expiryDate = issueDate.plusYears(5);
+	//	}
 }
