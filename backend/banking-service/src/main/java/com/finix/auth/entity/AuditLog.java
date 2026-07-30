@@ -1,4 +1,4 @@
-package com.ebs.auth.entity;
+package com.finix.auth.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -7,7 +7,8 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,8 +34,9 @@ public class AuditLog {
     private String description;
 
     @NotNull
+    @Builder.Default
     @Column(name = "log_date", nullable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime logDate;
+    private LocalDateTime logDate = LocalDateTime.now();
 
     @PrePersist
     public void prePersist() {

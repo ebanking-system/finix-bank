@@ -1,7 +1,8 @@
-package com.ebs.common.entity.meta;
+package com.finix.common.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -10,7 +11,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
@@ -23,7 +25,12 @@ public abstract class BaseEntity {
     private Long createdBy;
 
     @CreatedDate
-    @Column(name = "created_date", nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(
+        name = "created_date",
+        nullable = false,
+        updatable = false,
+        columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+    )
     private LocalDateTime createdDate;
 
     @LastModifiedBy
@@ -35,19 +42,9 @@ public abstract class BaseEntity {
     private LocalDateTime modifiedDate;
 
     @PrePersist
-    public void prePersist() {
+    protected void prePersist() {
         if (isActive == null) {
             isActive = true;
-        }
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        if (modifiedDate == null) {
-            modifiedDate = LocalDateTime.now();
         }
     }
 }

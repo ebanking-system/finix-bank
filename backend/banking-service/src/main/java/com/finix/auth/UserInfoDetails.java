@@ -1,6 +1,6 @@
-package com.ebs.auth.security;
+package com.finix.auth;
 
-import com.ebs.auth.entity.User;
+import com.finix.auth.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

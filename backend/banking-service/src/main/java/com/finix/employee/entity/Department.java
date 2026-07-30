@@ -1,4 +1,4 @@
-package com.ebs.employee.entity;
+package com.finix.employee.entity;
 
 public enum Department {
     MANAGEMENT, KYC, ACCOUNTS, LOANS, CUSTOMER_SERVICE
