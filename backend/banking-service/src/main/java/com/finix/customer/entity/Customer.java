@@ -18,7 +18,10 @@ import java.time.LocalDate;
 @Table(name = "customers")
 public class Customer {
 
-    @Id
+	@Id
+    @Column(name = "customer_id")
+    private Long customerId;
+	
     @JoinColumn(name = "customer_id")
     @MapsId
     @OneToOne
