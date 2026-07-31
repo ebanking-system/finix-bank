@@ -25,6 +25,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,7 +37,8 @@ import lombok.ToString;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = { "loanType", "repayments" }) // Add "customer" later
+@ToString(exclude = { "loanType", "repayments","customer" }) 
+@EqualsAndHashCode(exclude = { "loanType", "repayments", "customer" })
 public class Loan {
 
     @Id
@@ -44,7 +46,6 @@ public class Loan {
     @Column(name = "loan_id")
     private Integer loanId;
 
-    // Uncomment when Customer module is ready
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;

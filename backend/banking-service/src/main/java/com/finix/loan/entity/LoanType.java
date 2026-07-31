@@ -23,6 +23,7 @@ public class LoanType {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "loan_type_id")
     private Integer loanTypeId;
 
     @NotBlank
