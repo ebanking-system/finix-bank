@@ -16,7 +16,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 @Table(name = "customers")
-public class Customer extends BaseEntity {
+public class Customer {
 
     @Id
     @JoinColumn(name = "customer_id")

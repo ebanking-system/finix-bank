@@ -14,7 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "employees")
-public class Employee extends BaseEntity {
+public class Employee {
 
 	@Id
     @JoinColumn(name = "employee_id")
