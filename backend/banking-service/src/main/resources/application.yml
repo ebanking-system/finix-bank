@@ -2,9 +2,12 @@ spring:
   application:
     name: ebankingsystem
   datasource:
-    url: jdbc:mysql://ebankingsystemdb-1001-ebankingsystemdb.g.aivencloud.com:27032/ebankingsystem?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+#    url: jdbc:mysql://ebankingsystemdb-1001-ebankingsystemdb.g.aivencloud.com:27032/ebankingsystem?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=tru
+    url: jdbc:mysql://localhost:3306/bank
+#    username: ${DB_USERNAME
+    username: root
+#    password: ${DB_PASSWORD
+    password: Pass@123
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect

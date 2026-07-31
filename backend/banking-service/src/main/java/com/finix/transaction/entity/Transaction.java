@@ -10,6 +10,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 @Getter
 @Setter
 @Builder
@@ -17,7 +19,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "transactions")
-public class Transaction extends BaseEntity {
+public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,6 +52,7 @@ public class Transaction extends BaseEntity {
     @Column(name = "remarks", length = 255)
     private String remarks;
 
+    @CreationTimestamp
     @NotNull(message = "Transaction date/time is mandatory")
     @Column(name = "transaction_date_time", nullable = false)
     private LocalDateTime transactionDateTime;

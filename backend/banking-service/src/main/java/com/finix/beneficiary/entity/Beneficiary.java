@@ -14,7 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "beneficiaries")
-public class Beneficiary extends BaseEntity {
+public class Beneficiary  {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

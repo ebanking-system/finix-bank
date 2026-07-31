@@ -11,6 +11,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,7 +38,7 @@ public class FixedDeposits {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long fdId;
 
-	@ManyToMany
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name="account_id")
 	private Account account;
 	

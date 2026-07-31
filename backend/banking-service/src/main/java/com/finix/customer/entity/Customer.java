@@ -1,5 +1,6 @@
 package com.finix.customer.entity;
 
+import com.finix.auth.entity.User;
 import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -15,11 +16,13 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Entity
 @Table(name = "customers")
-public class Customer extends BaseEntity {
+public class Customer {
 
     @Id
-    @Column(name = "customer_id")
-    private Long userId;
+    @JoinColumn(name = "customer_id")
+    @MapsId
+    @OneToOne
+    private User user;
 
     @NotBlank(message = "First name is mandatory")
     @Column(name = "first_name", length = 100, nullable = false)
