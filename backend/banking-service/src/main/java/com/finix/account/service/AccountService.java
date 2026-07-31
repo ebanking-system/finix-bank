@@ -2,6 +2,8 @@ package com.finix.account.service;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
+
 import com.finix.account.dto.AccountResponse;
 import com.finix.account.dto.CreateAccountRequest;
 import com.finix.account.entity.AccountType;
@@ -15,4 +17,6 @@ public interface AccountService {
     AccountResponse getAccountByNumber(String accountNumber);
 
     List<AccountResponse> getAccountsByCustomer(Long customerId);
+
+	ResponseEntity<?> getBalance(AccountType accountType);
 }

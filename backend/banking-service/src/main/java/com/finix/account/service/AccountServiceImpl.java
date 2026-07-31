@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -165,5 +166,25 @@ public class AccountServiceImpl implements AccountService {
                 })
                 .collect(Collectors.toList());
     }
+
+	@Override
+	public ResponseEntity<?> getBalance(AccountType accountType) {
+		// TODO Auto-generated method stub
+		Authentication authentication =
+    	        SecurityContextHolder.getContext().getAuthentication();
+
+    	CustomUserDetailsImpl user =
+    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+
+    	Long userId = user.getUserId();
+    	
+    	try {
+    		BigDecimal balance=accountRepository.findByIdAndAccountType(userId,accountType).orElseThrow().getBalance();    
+    		return ResponseEntity.ok(balance);
+    	}catch(Exception ex) {
+    		return ResponseEntity.badRequest().body("ERROR :"+ex.getMessage());
+    	}
+    	
+	}
 
 }

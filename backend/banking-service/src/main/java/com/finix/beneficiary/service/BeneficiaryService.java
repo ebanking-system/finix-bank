@@ -10,4 +10,8 @@ public interface BeneficiaryService {
 
 	ResponseEntity<?> deleteBeneficiary(Long id);
 
+	ResponseEntity<?> getAllBeneficiaries();
+
+	ResponseEntity<?> updateBeneficiary(Long id, String name);
+
 }
