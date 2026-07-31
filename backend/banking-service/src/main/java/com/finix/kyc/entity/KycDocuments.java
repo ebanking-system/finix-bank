@@ -14,7 +14,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NegativeOrZero;
 import lombok.AllArgsConstructor;
@@ -35,7 +37,7 @@ public class KycDocuments {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	@OneToMany
+	@OneToOne
 	@JoinColumn(name="customer_id")
 	private Customer customer;
 

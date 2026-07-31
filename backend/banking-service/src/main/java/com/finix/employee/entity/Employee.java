@@ -1,5 +1,6 @@
 package com.finix.employee.entity;
 
+import com.finix.auth.entity.User;
 import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -15,9 +16,11 @@ import lombok.*;
 @Table(name = "employees")
 public class Employee extends BaseEntity {
 
-    @Id
-    @Column(name = "employee_id")
-    private Long userId;
+	@Id
+    @JoinColumn(name = "employee_id")
+    @MapsId
+    @OneToOne
+    private User user;
 
     @NotBlank(message = "First name is mandatory")
     @Column(name = "first_name", length = 100, nullable = false)

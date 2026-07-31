@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.finix.customer.entity.Customer;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,9 +45,9 @@ public class Loan {
     private Integer loanId;
 
     // Uncomment when Customer module is ready
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "customer_id", nullable = false)
-//    private Customer customer;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loan_type_id", nullable = false)
