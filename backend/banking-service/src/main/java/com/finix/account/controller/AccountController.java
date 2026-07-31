@@ -61,4 +61,9 @@ public class AccountController {
         return ResponseEntity.ok(
                 accountService.getAccountsByCustomer(customerId));
     }
+    
+    @GetMapping("/balance")
+    public ResponseEntity<?>getAccountBalance(@RequestParam AccountType accountType){
+    	return accountService.getBalance(accountType);
+    }
 }

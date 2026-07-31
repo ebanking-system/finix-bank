@@ -22,7 +22,6 @@ import lombok.Setter;
 @Setter
 public class BeneficiaryDTO {
 	
-    private Long beneficiaryId;
 
     private String beneficiaryName;
 

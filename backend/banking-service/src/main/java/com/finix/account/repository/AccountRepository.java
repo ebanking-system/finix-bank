@@ -1,6 +1,7 @@
 package com.finix.account.repository;
 
 import com.finix.account.entity.Account;
+import com.finix.account.entity.AccountType;
 import com.finix.customer.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -17,4 +18,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     // Get all accounts of a customer
     List<Account> findByCustomer(Customer customer);
+
+    Optional<Account> findByIdAndAccountType(Long userId,AccountType accountType);
+
+	Optional<Account> findByAccountNumber(Long customerId);
 }
