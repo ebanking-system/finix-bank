@@ -12,7 +12,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class TransactionDto {
+public class TransferTransactionDto {
 	
 		private AccountType accountType;
 	   
