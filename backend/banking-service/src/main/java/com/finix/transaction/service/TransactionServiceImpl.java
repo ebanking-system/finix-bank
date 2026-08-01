@@ -251,11 +251,14 @@ public class TransactionServiceImpl implements TransactionService{
             endDate = toDate.atTime(23, 59, 59);
         }
 
+        boolean isDebit = nature == TransactionNature.DEBIT;
+        boolean isCredit = nature == TransactionNature.CREDIT;
         Page<Transaction> transactionPage =
                 transactionRepository.findTransactions(
                         customer,
                         status,
-                        nature,
+                        isDebit,
+                        isCredit,
                         startDate,
                         endDate,
                         pageable);

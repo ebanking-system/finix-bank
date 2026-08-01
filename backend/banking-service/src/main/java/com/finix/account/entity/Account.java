@@ -21,6 +21,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@ToString(exclude = "customer")
 @Table(name = "accounts")
 public class Account {
 

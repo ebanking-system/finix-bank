@@ -32,67 +32,63 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
 	
 	List<Transaction> findByFromAccountCustomerOrToAccountCustomer(Customer fromCustomer,Customer toCustomer);
 
-	    @Query("""
-	        SELECT t
-	        FROM Transaction t
-	        WHERE
-	        (
-	            t.fromAccount.customer = :customer
-	            OR
-	            t.toAccount.customer = :customer
-	        )
+	@Query("""
+			SELECT t
+			FROM Transaction t
+			WHERE
+			(
+			    t.fromAccount.customer = :customer
+			    OR
+			    t.toAccount.customer = :customer
+			)
 
-	        AND
-	        (
-	            :status IS NULL
-	            OR
-	            t.status = :status
-	        )
+			AND
+			(
+			    :status IS NULL
+			    OR t.status = :status
+			)
 
-	        AND
-	        (
-	            :fromDate IS NULL
-	            OR
-	            t.transactionDateTime >= :fromDate
-	        )
+			AND
+			(
+			    :fromDate IS NULL
+			    OR t.transactionDateTime >= :fromDate
+			)
 
-	        AND
-	        (
-	            :toDate IS NULL
-	            OR
-	            t.transactionDateTime <= :toDate
-	        )
+			AND
+			(
+			    :toDate IS NULL
+			    OR t.transactionDateTime <= :toDate
+			)
 
-	        AND
-	        (
-	            :nature IS NULL
+			AND
+			(
+			    (:isDebit = false AND :isCredit = false)
 
-	            OR
+			    OR
 
-	            (:nature = com.finix.transaction.entity.TransactionNature.DEBIT
-	                AND
-	                t.fromAccount.customer = :customer)
+			    (:isDebit = true
+			        AND t.fromAccount.customer = :customer)
 
-	            OR
+			    OR
 
-	            (:nature = com.finix.transaction.entity.TransactionNature.CREDIT
-	                AND
-	                t.toAccount.customer = :customer)
-	        )
-	        """)
-	    Page<Transaction> findTransactions(
+			    (:isCredit = true
+			        AND t.toAccount.customer = :customer)
+			)
+			""")
+			Page<Transaction> findTransactions(
 
-	            @Param("customer") Customer customer,
+			        Customer customer,
 
-	            @Param("status") TransactionStatus status,
+			        TransactionStatus status,
 
-	            @Param("nature") TransactionNature nature,
+			        Boolean isDebit,
 
-	            @Param("fromDate") LocalDateTime fromDate,
+			        Boolean isCredit,
 
-	            @Param("toDate") LocalDateTime toDate,
+			        LocalDateTime fromDate,
 
-	            Pageable pageable
+			        LocalDateTime toDate,
 
-	    );
+			        Pageable pageable
+			);
 }
