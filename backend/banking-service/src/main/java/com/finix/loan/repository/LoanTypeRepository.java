@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import com.finix.loan.entity.LoanType;
 
 @Repository
-public interface LoanTypeRepository extends JpaRepository<LoanType, Integer>{
+public interface LoanTypeRepository extends JpaRepository<LoanType, Long>{
 
 }

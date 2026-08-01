@@ -5,20 +5,22 @@ import java.time.LocalDateTime;
 
 import com.finix.loan.entity.LoanStatus;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoanResponseDto {
 
-    private Integer loanId;
-
-    private Integer customerId;
+    private Long loanId;
+    
+    private Long customerId;
+    
+    private String customerName;
+    
+    private String mobile;
 
     private String loanType;
 
@@ -39,5 +41,4 @@ public class LoanResponseDto {
     private LocalDateTime startDate;
 
     private LocalDateTime endDate;
-
 }
