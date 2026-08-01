@@ -1,4 +1,4 @@
-package com.finix.beneficiary.controller;
+	package com.finix.beneficiary.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;

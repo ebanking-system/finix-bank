@@ -51,7 +51,7 @@ public class AccountServiceImpl implements AccountService {
         Customer customer = customerRepository.findById(userId)
                 .orElseThrow(() ->
                         new RuntimeException("Customer not found"));
-        KycDocuments kycAccount=kycDocumentRepository.findByCustomerId(userId);
+        KycDocuments kycAccount=kycDocumentRepository.findByCustomer(customer);
         if(kycAccount==null) {
         	return null;
         }
@@ -178,8 +178,10 @@ public class AccountServiceImpl implements AccountService {
 
     	Long userId = user.getUserId();
     	
+    	Customer customer =customerRepository.findById(userId).orElseThrow();
+    	
     	try {
-    		BigDecimal balance=accountRepository.findByIdAndAccountType(userId,accountType).orElseThrow().getBalance();    
+    		BigDecimal balance=accountRepository.findByCustomerAndAccountType(customer,accountType).getBalance();    
     		return ResponseEntity.ok(balance);
     	}catch(Exception ex) {
     		return ResponseEntity.badRequest().body("ERROR :"+ex.getMessage());
