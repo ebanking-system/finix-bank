@@ -58,6 +58,7 @@ public class JwtUtils {
 	 */
 	public Claims verifyJwt(String jwt)
 	{
+		
 		return Jwts.parser() //creates a parser to parse the token
 				.verifyWith(secretKey) //using same secret key for verification
 				.build() //builds JWT parser object

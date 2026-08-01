@@ -1,15 +1,18 @@
 package com.finix.beneficiary.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finix.auth.dto.ApiResponse;
+import com.finix.auth.dto.JwtDTO;
 import com.finix.auth.entity.User;
 import com.finix.auth.repository.UserRepository;
 import com.finix.beneficiary.dto.BeneficiaryDTO;
@@ -20,23 +23,31 @@ import com.finix.customer.repository.CustomerRepository;
 import com.finix.security.CustomUserDetailsImpl;
 
 import lombok.RequiredArgsConstructor;
+
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class BeneficiaryServiceImpl implements BeneficiaryService {
+
+    private final PasswordEncoder passwordEncoder;
 	private final BeneficiaryRepository beneficiaryRepository;
 	private final CustomerRepository customerRepository;
 	private final ModelMapper modelMapper;
+
+   
 	@Override
 	public ResponseEntity<?> addBeneficiary(BeneficiaryDTO dto) {
 		
 		Authentication authentication =
     	        SecurityContextHolder.getContext().getAuthentication();
 
-    	CustomUserDetailsImpl user =
-    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+//    	CustomUserDetailsImpl user =
+//    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+    	
+    	JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
 
-    	Customer customer = customerRepository.findById(user.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
+    	Customer customer = customerRepository.findById(jwt.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
 		
 		Beneficiary entity=modelMapper.map(dto,Beneficiary.class);
 		entity.setCustomer(customer);
@@ -63,10 +74,22 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
 	public ResponseEntity<?> getAllBeneficiaries() {
 		// TODO Auto-generated method stub
 		List<Beneficiary> resultList= beneficiaryRepository.findAll();
-		if(resultList.isEmpty()) {
+		System.out.print("Beneficiary");
+		for(Beneficiary b:resultList) {
+			System.out.println(b);
+		}
+		List<BeneficiaryDTO> resp=new ArrayList<>();
+		
+		resultList.stream().map(b->resp.add(modelMapper.map(b,BeneficiaryDTO.class))).toList();
+		
+		System.out.print("BeneficiaryDTO");
+		for(BeneficiaryDTO b:resp) {
+			System.out.println(b);
+		}
+		if(resp.isEmpty()) {
 			return ResponseEntity.noContent().build();
 		}
-		return ResponseEntity.ok(resultList);
+		return ResponseEntity.ok(resp);
 	}
 	@Override
 	public ResponseEntity<?> updateBeneficiary(Long id,String name) {

@@ -55,12 +55,14 @@ public class SecurityConfiguration {
 		 */
 		http.authorizeHttpRequests(request ->
 		request.requestMatchers("/v3/api-docs/**","/swagger-ui/**",
-				"/users/signin","/users/signup","/employee/signup","/users/password-encryption")	
+				"/users/signin","/users/signup","/employee/signup","/users/password-encryption","/api/beneficiary")	
 		.permitAll()
 		.requestMatchers(HttpMethod.OPTIONS).permitAll()
-		
-		.requestMatchers(HttpMethod.POST, "/api/accounts")
+		.requestMatchers(HttpMethod.GET, "/api/beneficiary").permitAll()
+		.requestMatchers(HttpMethod.POST, "/api/accounts","/api/transaction")
 		.hasRole("CUSTOMER")
+//		.requestMatchers(HttpMethod.GET, "/api/beneficiary")
+//		.hasRole("CUSTOMER")
 		.requestMatchers(HttpMethod.GET,"/appointments","/patients")
 		.hasRole("ADMIN")
 		.requestMatchers(HttpMethod.PATCH,"/appointments/complete")

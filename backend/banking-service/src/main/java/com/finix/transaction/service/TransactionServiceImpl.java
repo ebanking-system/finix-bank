@@ -23,6 +23,7 @@ import com.finix.account.entity.Account;
 import com.finix.account.entity.AccountStatus;
 import com.finix.account.entity.AccountType;
 import com.finix.account.repository.AccountRepository;
+import com.finix.auth.dto.JwtDTO;
 import com.finix.common.exception.BusinessException;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
@@ -61,11 +62,13 @@ public class TransactionServiceImpl implements TransactionService{
                 .getContext()
                 .getAuthentication();
 
-        CustomUserDetailsImpl user =
-                (CustomUserDetailsImpl) authentication.getPrincipal();
+
+        JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
+
 
         Customer customer = customerRepository
-                .findById(user.getUserId())
+                .findById(jwt.getUserId())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         Account fromAccount = accountRepository
@@ -220,11 +223,13 @@ public class TransactionServiceImpl implements TransactionService{
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
-        CustomUserDetailsImpl user =
-                (CustomUserDetailsImpl) authentication.getPrincipal();
+//        CustomUserDetailsImpl user =
+//                (CustomUserDetailsImpl) authentication.getPrincipal();
 
+        JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
         Customer customer =
-                customerRepository.findById(user.getUserId())
+                customerRepository.findById(jwt.getUserId())
                         .orElseThrow(() ->
                                 new RuntimeException("Customer not found"));
 
