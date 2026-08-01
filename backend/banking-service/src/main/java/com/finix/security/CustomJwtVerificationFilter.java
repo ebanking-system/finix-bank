@@ -30,6 +30,8 @@ public class CustomJwtVerificationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
+		
+		System.out.print("JWT FILTER RUNNING");
 		try {
 			// 1. Check if Authorization header exists in the incoming reques & starts with
 			// Bearer
@@ -52,22 +54,31 @@ public class CustomJwtVerificationFilter extends OncePerRequestFilter {
 				String email=claims.getSubject();
 				JwtDTO dto = new JwtDTO(userId, userRole,email);
 				UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(dto, null,
-						List.of(new SimpleGrantedAuthority(userRole)));
+						List.of(new SimpleGrantedAuthority("ROLE_"+userRole)));
+
+				
 				/*
 				 * 5. Add authentication object under - Spring security context holder - so that
 				 * next filters can get auth details directly
 				 */
+				
 				SecurityContextHolder.getContext().setAuthentication(authentication);
+				System.out.println("===== AUTHENTICATED =====");
+				System.out.println("Principal: " + authentication.getPrincipal());
+				System.out.println("Authorities: " + authentication.getAuthorities());
+				System.out.println("Authenticated: " + authentication.isAuthenticated());
 			} else {
 				log.info("******NO JWT *********");
 			}
 			// in case of no exceptions -> continue to the next Filter | D.S
 			filterChain.doFilter(request, response);
+			
 		} catch (Exception e) {
 			/* -> invalid jwt -> abort further request processing
 			 * clear sec ctx holder
 			 * send error resp (SC 401) to the client 
 			 */
+			System.out.print(e.getMessage());
 			SecurityContextHolder.clearContext();
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 			response.getWriter().print("Invalid JWT - Authentication Failed!!!!!");

@@ -23,6 +23,7 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
 		User user=userRepository.findByEmail(email);
 //				.orElseThrow(() -> new RuntimeException("User by this email doesn't exist !!!!!"));
 		//=> user by email - exists
+		
 		return new CustomUserDetailsImpl(user.getUserId(),user.getEmail(),user.getPasswordHash(),user.getRole());
 	}
 

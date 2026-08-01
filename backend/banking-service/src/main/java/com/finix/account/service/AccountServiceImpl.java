@@ -6,6 +6,7 @@ import com.finix.account.entity.Account;
 import com.finix.account.entity.AccountStatus;
 import com.finix.account.entity.AccountType;
 import com.finix.account.repository.AccountRepository;
+import com.finix.auth.dto.JwtDTO;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
 import com.finix.kyc.entity.KycDocuments;
@@ -42,10 +43,13 @@ public class AccountServiceImpl implements AccountService {
     	Authentication authentication =
     	        SecurityContextHolder.getContext().getAuthentication();
 
-    	CustomUserDetailsImpl user =
-    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+//    	CustomUserDetailsImpl user =
+//    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+    	
+    	JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
 
-    	Long userId = user.getUserId();
+    	Long userId = jwt.getUserId();
     	
         // Check whether customer exists
         Customer customer = customerRepository.findById(userId)
@@ -173,10 +177,13 @@ public class AccountServiceImpl implements AccountService {
 		Authentication authentication =
     	        SecurityContextHolder.getContext().getAuthentication();
 
-    	CustomUserDetailsImpl user =
-    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+//    	CustomUserDetailsImpl user =
+//    	        (CustomUserDetailsImpl) authentication.getPrincipal();
+		
+		JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
 
-    	Long userId = user.getUserId();
+    	Long userId = jwt.getUserId();
     	
     	Customer customer =customerRepository.findById(userId).orElseThrow();
     	

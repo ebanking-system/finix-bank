@@ -3,11 +3,11 @@ spring:
     name: ebankingsystem
 
   datasource:
-#    url: jdbc:mysql://ebankingsystemdb-1001-ebankingsystemdb.g.aivencloud.com:27032/ebankingsystem?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true
+    # url: jdbc:mysql://ebankingsystemdb-1001-ebankingsystemdb.g.aivencloud.com:27032/ebankingsystem?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true
     url: jdbc:mysql://localhost:3306/bank
-#    username: ${DB_USERNAME}
+    # username: ${DB_USERNAME}
     username: root
-#    password: ${DB_PASSWORD}
+    # password: ${DB_PASSWORD}
     password: Pass@123
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -23,6 +23,10 @@ jwt:
     time: 7200000
   secret:
     key: 62d42698ee3ade259800a37310970af1c16a421e5d44f4b0d7831ed714377e4f
+
+logging:
+  level:
+    org.springframework.security: DEBUG
 
 # jwt.exp.time=7200000
 # jwt.secret.key=62d42698ee3ade259800a37310970af1c16a421e5d44f4b0d7831ed714377e4f

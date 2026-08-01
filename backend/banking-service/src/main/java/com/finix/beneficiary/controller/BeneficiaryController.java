@@ -17,24 +17,25 @@ import com.finix.beneficiary.service.BeneficiaryService;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-@RequestMapping("api/beneficiary")
+@RequestMapping("/api/beneficiary")
 @RestController
 @RequiredArgsConstructor
 public class BeneficiaryController {
-	private BeneficiaryService beneficiaryService;
+	private final BeneficiaryService beneficiaryService;
 	
 	@PostMapping("/add")
 	public ResponseEntity<?> addBeneficiary(@RequestBody BeneficiaryDTO beneficiaryDto){
 		return beneficiaryService.addBeneficiary(beneficiaryDto);
 	}
 	
-	@DeleteMapping
+	@DeleteMapping("/{id}")
 	public ResponseEntity<?> deleteBeneficiary(@PathVariable Long id){
 		return beneficiaryService.deleteBeneficiary(id);
 	}
 	
 	@GetMapping
 	public ResponseEntity<?> getAllBeneficiaries(){
+		System.err.println("Controller Hit");
 		return beneficiaryService.getAllBeneficiaries();
 	}
 	@PatchMapping
