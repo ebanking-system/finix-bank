@@ -9,6 +9,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+@ToString(exclude = "user")
 @Getter
 @Setter
 @Builder

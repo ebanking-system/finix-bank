@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finix.auth.dto.AuthRequest;
+import com.finix.auth.dto.RegistrationDto;
 import com.finix.auth.service.UserService;
 
 import jakarta.validation.Valid;
@@ -33,8 +34,11 @@ public class UserController {
 		
 			// call service layer method
 			return ResponseEntity.ok(userService.authenticate(request));
-
-		
+	}
+	
+	@PostMapping("/signup")
+	public ResponseEntity<?> userSignup(@RequestBody @Valid RegistrationDto registrationDto){
+		return ResponseEntity.ok(userService.registration(registrationDto));
 	}
 	/*
 	 * URI - /password-encryption
