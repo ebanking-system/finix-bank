@@ -38,7 +38,7 @@ public class BeneficiaryController {
 		System.err.println("Controller Hit");
 		return beneficiaryService.getAllBeneficiaries();
 	}
-	@PatchMapping
+	@PatchMapping("/{id}")
 	public ResponseEntity<?> updateBeneficiary(@PathVariable Long id,@RequestParam String name){
 		return beneficiaryService.updateBeneficiary(id,name);
 	}

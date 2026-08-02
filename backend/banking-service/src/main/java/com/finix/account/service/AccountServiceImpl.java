@@ -24,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Random;
 
 @Service
@@ -82,7 +83,7 @@ public class AccountServiceImpl implements AccountService {
         AccountResponse response =
                 modelMapper.map(savedAccount, AccountResponse.class);
 
-        response.setCustomerId(customer.getUser().getUserId());
+//        response.setCustomerId(customer.getUser().getUserId());
 
         return response;
     }
@@ -124,10 +125,34 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() ->
                         new RuntimeException("Account not found"));
 
+//        private Long accountId;
+//
+//        private String accountNumber;
+//
+//        private AccountType accountType;
+//
+//        private BigDecimal balance;
+//
+//        private String ifscCode;
+//
+//        private AccountStatus status;
+//
+//        private Long customerId;
+
+//        private LocalDateTime createdDate;
+//        AccountResponse resp=new AccountResponse();
+//        resp.setAccountId(account.getAccountId());
+//        resp.setAccountNumber(account.getAccountNumber());
+//        resp.setAccountType(account.getAccountType());
+//        resp.setBalance(account.getBalance());
+//        resp.setIfscCode(account.getIfscCode());
+//        resp.setStatus(account.getStatus());
+//        resp.setCreatedDate(account.getCreatedDate());
+        
         AccountResponse response =
                 modelMapper.map(account, AccountResponse.class);
 
-        response.setCustomerId(account.getCustomer().getUser().getUserId());
+//        response.setCustomerId(account.getCustomer().getUser().getUserId());
 
         return response;
     }
@@ -142,7 +167,7 @@ public class AccountServiceImpl implements AccountService {
         AccountResponse response =
                 modelMapper.map(account, AccountResponse.class);
 
-        response.setCustomerId(account.getCustomer().getUser().getUserId());
+//        response.setCustomerId(account.getCustomer().getUser().getUserId());
 
         return response;
     }
@@ -163,7 +188,7 @@ public class AccountServiceImpl implements AccountService {
                     AccountResponse response =
                             modelMapper.map(account, AccountResponse.class);
 
-                    response.setCustomerId(customer.getUser().getUserId());
+//                    response.setCustomerId(customer.getUser().getUserId());
 
                     return response;
 
