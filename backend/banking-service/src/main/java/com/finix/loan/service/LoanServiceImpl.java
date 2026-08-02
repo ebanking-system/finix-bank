@@ -11,9 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finix.customer.repository.CustomerRepository;
+import com.finix.loan.dto.LoanRepaymentResponseDto;
 import com.finix.loan.dto.LoanRequestDto;
 import com.finix.loan.dto.LoanResponseDto;
+import com.finix.loan.dto.PayEmiRequestDto;
 import com.finix.loan.dto.RejectLoanRequestDto;
+import com.finix.loan.repository.LoanRepaymentRepository;
 import com.finix.loan.repository.LoanRepository;
 import com.finix.loan.repository.LoanTypeRepository;
 import org.springframework.security.core.Authentication;
@@ -26,7 +29,9 @@ import com.finix.account.repository.AccountRepository;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.customer.entity.Customer;
 import com.finix.loan.entity.Loan;
+import com.finix.loan.entity.LoanRepayment;
 import com.finix.loan.entity.LoanType;
+import com.finix.loan.entity.RepaymentStatus;
 import com.finix.loan.entity.LoanStatus;
 import com.finix.auth.dto.JwtDTO;
 import com.finix.transaction.entity.Transaction;
@@ -56,6 +61,10 @@ public class LoanServiceImpl implements LoanService {
     private final TransactionRepository transactionRepository;
     
     private final EmiScheduleService emiScheduleService;
+    
+    private final LoanRepaymentRepository loanRepaymentRepository;
+    
+    
 
 
     //for customer to apply loan
@@ -315,6 +324,215 @@ public class LoanServiceImpl implements LoanService {
         dto.setMobile(loan.getCustomer().getMobile());
 
         return dto;
+    }
+
+
+    @Override
+    public ResponseEntity<?> getRepayments(Long loanId) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        JwtDTO jwt =
+                (JwtDTO) authentication.getPrincipal();
+
+        Customer customer =
+                customerRepository.findById(jwt.getUserId())
+                        .orElseThrow(() ->
+                                new RuntimeException("Customer not found"));
+
+        Loan loan =
+                loanRepository.findById(loanId)
+                        .orElseThrow(() ->
+                                new RuntimeException("Loan not found"));
+
+        // Customer can only view their own loan
+        if (!loan.getCustomer().getCustomerId()
+                .equals(customer.getCustomerId())) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "You are not authorized to view this loan."));
+        }
+
+        List<LoanRepayment> repayments =
+                loanRepaymentRepository
+                        .findByLoanOrderByEmiNumberAsc(loan);
+
+        List<LoanRepaymentResponseDto> response =
+                repayments.stream()
+                        .map(repayment ->
+                                mapper.map(
+                                        repayment,
+                                        LoanRepaymentResponseDto.class))
+                        .toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    @Override
+    public ResponseEntity<?> payEmi(Long repaymentId,
+                                    PayEmiRequestDto request) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        JwtDTO jwt =
+                (JwtDTO) authentication.getPrincipal();
+
+        Customer customer =
+                customerRepository.findById(jwt.getUserId())
+                        .orElseThrow(() ->
+                                new RuntimeException("Customer not found"));
+
+        // Find repayment
+        LoanRepayment repayment =
+                loanRepaymentRepository.findById(repaymentId)
+                        .orElseThrow(() ->
+                                new RuntimeException("Repayment not found"));
+
+        Loan loan = repayment.getLoan();
+        
+     // Customer must pay EMIs in sequence
+        List<LoanRepayment> pendingRepayments =
+                loanRepaymentRepository.findByLoanAndStatusOrderByEmiNumberAsc(
+                        loan,
+                        RepaymentStatus.PENDING);
+
+        if (!pendingRepayments.isEmpty()) {
+
+            LoanRepayment nextPendingEmi = pendingRepayments.get(0);
+
+            if (!nextPendingEmi.getRepaymentId()
+                    .equals(repayment.getRepaymentId())) {
+
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(
+                                "FAILED",
+                                "Please pay EMI #" +
+                                nextPendingEmi.getEmiNumber() +
+                                " first."));
+            }
+        }
+
+        // Verify ownership
+        if (!loan.getCustomer().getCustomerId()
+                .equals(customer.getCustomerId())) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "You are not authorized to pay this EMI."));
+        }
+
+        // Already paid?
+        if (repayment.getStatus() == RepaymentStatus.PAID) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "EMI already paid."));
+        }
+
+        // Loan should be active
+        if (loan.getStatus() != LoanStatus.ACTIVE) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "Loan is not active."));
+        }
+
+        // Customer account
+        Account account =
+                accountRepository.findByCustomerAndAccountType(
+                        customer,
+                        request.getAccountType());
+
+        if (account == null) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "Account not found."));
+        }
+
+        // Account active
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "Account is not active."));
+        }
+
+        // Balance check
+        if (account.getBalance()
+                .compareTo(repayment.getAmountDue()) < 0) {
+
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "Insufficient balance."));
+        }
+
+        // Debit account
+        account.setBalance(
+                account.getBalance()
+                        .subtract(repayment.getAmountDue()));
+
+        accountRepository.save(account);
+
+        // Update repayment
+        repayment.setAmountPaid(repayment.getAmountDue());
+        repayment.setPaymentDate(LocalDateTime.now());
+        repayment.setStatus(RepaymentStatus.PAID);
+
+        loanRepaymentRepository.save(repayment);
+
+        // Update loan remaining amount
+        loan.setRemainingAmount(
+                loan.getRemainingAmount()
+                        .subtract(repayment.getAmountDue()));
+
+        // Close loan if fully paid
+        if (loan.getRemainingAmount()
+                .compareTo(BigDecimal.ZERO) <= 0) {
+
+            loan.setRemainingAmount(BigDecimal.ZERO);
+            loan.setStatus(LoanStatus.CLOSED);
+        }
+
+        loanRepository.save(loan);
+
+        // Create transaction
+        Transaction transaction = new Transaction();
+
+        transaction.setFromAccount(account);
+        transaction.setToAccount(null);
+
+        transaction.setAmount(repayment.getAmountDue());
+
+        transaction.setTransactionType(
+                TransactionType.LOAN_REPAYMENT);
+
+        transaction.setReferenceNumber(
+                UUID.randomUUID().toString());
+
+        transaction.setRemarks(
+                "Loan EMI Payment");
+
+        transaction.setStatus(
+                TransactionStatus.SUCCESS);
+
+        transactionRepository.save(transaction);
+
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "SUCCESS",
+                        "EMI paid successfully."));
     }
     
     
