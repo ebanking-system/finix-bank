@@ -1,5 +1,5 @@
 package com.finix.account.entity;
 
 public enum AccountType {
-    SAVINGS, CURRENT
+    SAVINGS, CURRENT,INTERNAL
 }

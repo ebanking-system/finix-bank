@@ -7,16 +7,17 @@ import org.springframework.http.ResponseEntity;
 import com.finix.account.dto.AccountResponse;
 import com.finix.account.dto.CreateAccountRequest;
 import com.finix.account.entity.AccountType;
+import com.finix.auth.dto.ApiResponse;
 
 public interface AccountService {
 
     AccountResponse createAccount(AccountType accType);
 
-    AccountResponse getAccountById(Long accountId);
+    ApiResponse getAccountById(Long accountId);
 
-    AccountResponse getAccountByNumber(String accountNumber);
+    ApiResponse getAccountByNumber(String accountNumber);
 
-    List<AccountResponse> getAccountsByCustomer(Long customerId);
+    ApiResponse getAccountsByCustomer(Long customerId);
 
 	ResponseEntity<?> getBalance(AccountType accountType);
 }

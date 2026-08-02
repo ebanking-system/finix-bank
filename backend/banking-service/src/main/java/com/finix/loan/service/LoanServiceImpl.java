@@ -46,17 +46,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LoanServiceImpl implements LoanService {
 
-    private final LoanRepository loanRepository;
+	private final LoanRepository loanRepository;
 
-    private final LoanTypeRepository loanTypeRepository;
+	private final LoanTypeRepository loanTypeRepository;
 
-    private final CustomerRepository customerRepository;
+	private final CustomerRepository customerRepository;
 
-    private final ModelMapper mapper;
-    
-    private final EmiCalculatorService emiCalculatorService;
-    
-    private final AccountRepository accountRepository;
+	private final ModelMapper mapper;
 
     private final TransactionRepository transactionRepository;
     
@@ -65,263 +61,213 @@ public class LoanServiceImpl implements LoanService {
     private final LoanRepaymentRepository loanRepaymentRepository;
     
     
+	private final EmiCalculatorService emiCalculatorService;
 
+	private final AccountRepository accountRepository;
 
-    //for customer to apply loan
-    @Override
-    public ResponseEntity<?> applyLoan(LoanRequestDto request) {
 
-        // Get logged-in user
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+	// for customer to apply loan
+	@Override
+	public ResponseEntity<?> applyLoan(LoanRequestDto request) {
 
-        JwtDTO jwt =
-                (JwtDTO) authentication.getPrincipal();
+		// Get logged-in user
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Fetch customer
-        Customer customer = customerRepository.findById(jwt.getUserId())
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
 
-        // Fetch loan type
-        LoanType loanType = loanTypeRepository.findById(request.getLoanTypeId())
-                .orElseThrow(() -> new RuntimeException("Loan type not found"));
+		// Fetch customer
+		Customer customer = customerRepository.findById(jwt.getUserId())
+				.orElseThrow(() -> new RuntimeException("Customer not found"));
 
-        // Map DTO to Entity
-        Loan loan = Loan.builder()
-                .customer(customer)
-                .loanType(loanType)
-                .amount(request.getAmount())
-                .tenureMonths(request.getTenureMonths())
-                .remainingAmount(request.getAmount())
-                .status(LoanStatus.UNDER_REVIEW)
-                .build();
+		// Fetch loan type
+		LoanType loanType = loanTypeRepository.findById(request.getLoanTypeId())
+				.orElseThrow(() -> new RuntimeException("Loan type not found"));
 
-        // Save
-        Loan savedLoan = loanRepository.save(loan);
+		// Map DTO to Entity
+		Loan loan = Loan.builder().customer(customer).loanType(loanType).amount(request.getAmount())
+				.tenureMonths(request.getTenureMonths()).remainingAmount(request.getAmount())
+				.status(LoanStatus.UNDER_REVIEW).build();
 
-        return ResponseEntity.ok(mapLoanResponse(savedLoan));
-    }
+		// Save
+		Loan savedLoan = loanRepository.save(loan);
 
+		return ResponseEntity.ok(mapLoanResponse(savedLoan));
+	}
 
-    //For Customer to get his applied loans
-    @Override
-    public ResponseEntity<?> getMyLoans() {
+	// For Customer to get his applied loans
+	@Override
+	public ResponseEntity<?> getMyLoans() {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        JwtDTO jwt =
-                (JwtDTO) authentication.getPrincipal();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
 
+		Customer customer = customerRepository.findById(jwt.getUserId())
+				.orElseThrow(() -> new RuntimeException("Customer not found"));
 
-        Customer customer =
-                customerRepository.findById(jwt.getUserId())
-                .orElseThrow(() ->
-                        new RuntimeException("Customer not found"));
+		List<Loan> loans = loanRepository.findByCustomer(customer);
 
-        List<Loan> loans = loanRepository.findByCustomer(customer);
+		List<LoanResponseDto> response = loans.stream().map(this::mapLoanResponse).toList();
 
-        List<LoanResponseDto> response =
-                loans.stream()
-                     .map(this::mapLoanResponse)
-                     .toList();
+		return ResponseEntity.ok(response);
+	}
 
-        return ResponseEntity.ok(response);
-    }
-    
-    //For Employee to get all pending loans
-    @Override
-    public ResponseEntity<?> getPendingLoans() {
+	// For Employee to get all pending loans
+	@Override
+	public ResponseEntity<?> getPendingLoans() {
 
-        List<Loan> loans =
-                loanRepository.findByStatus(LoanStatus.UNDER_REVIEW);
+		List<Loan> loans = loanRepository.findByStatus(LoanStatus.UNDER_REVIEW);
 
-        List<LoanResponseDto> response =
-                loans.stream()
-                     .map(this::mapLoanResponse)
-                     .toList();
+		List<LoanResponseDto> response = loans.stream().map(this::mapLoanResponse).toList();
 
-        return ResponseEntity.ok(response);
+		return ResponseEntity.ok(response);
 
-    }
+	}
 
+	// approve loan by Employee
+	@Override
+	public ResponseEntity<?> approveLoan(Long loanId) {
 
-    //approve loan by Employee
-    @Override
-    public ResponseEntity<?> approveLoan(Long loanId) {
+		// Get logged-in employee
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Get logged-in employee
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
 
-        JwtDTO jwt =
-                (JwtDTO) authentication.getPrincipal();
+		// Find loan
+		Loan loan = loanRepository.findById(loanId).orElseThrow(() -> new RuntimeException("Loan not found"));
 
-        // Find loan
-        Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+		// Loan must be under review
+		if (loan.getStatus() != LoanStatus.UNDER_REVIEW) {
+			return ResponseEntity.badRequest().body(new ApiResponse("FAILED", "Loan is already processed."));
+		}
 
-        // Loan must be under review
-        if (loan.getStatus() != LoanStatus.UNDER_REVIEW) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse("FAILED", "Loan is already processed."));
-        }
+		// Calculate EMI
+		BigDecimal emi = emiCalculatorService.calculateEmi(loan);
 
-        // Calculate EMI
-        BigDecimal emi = emiCalculatorService.calculateEmi(loan);
-
-        // Update loan details
-        loan.setStatus(LoanStatus.APPROVED);
-        loan.setApprovalDate(LocalDateTime.now());
-        loan.setApprovedBy(jwt.getUserId());
-        loan.setEmi(emi);
-        loan.setRemainingAmount(loan.getAmount());
-
-        // Save
-        Loan savedLoan = loanRepository.save(loan);
+		// Update loan details
+		loan.setStatus(LoanStatus.APPROVED);
+		loan.setApprovalDate(LocalDateTime.now());
+		loan.setApprovedBy(jwt.getUserId());
+		loan.setEmi(emi);
+		loan.setRemainingAmount(loan.getAmount());
 
-        return ResponseEntity.ok(mapLoanResponse(savedLoan));
-    }
+		// Save
+		Loan savedLoan = loanRepository.save(loan);
 
+		return ResponseEntity.ok(mapLoanResponse(savedLoan));
+	}
 
-    //Loan rejection
-    @Override
-    public ResponseEntity<?> rejectLoan(Long loanId,
-                                        RejectLoanRequestDto request) {
+	// Loan rejection
+	@Override
+	public ResponseEntity<?> rejectLoan(Long loanId, RejectLoanRequestDto request) {
 
-        // Get logged-in employee
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+		// Get logged-in employee
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        JwtDTO jwt =
-                (JwtDTO) authentication.getPrincipal();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
 
-        // Find Loan
-        Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() ->
-                        new RuntimeException("Loan not found"));
+		// Find Loan
+		Loan loan = loanRepository.findById(loanId).orElseThrow(() -> new RuntimeException("Loan not found"));
 
-        // Loan should be pending
-        if (loan.getStatus() != LoanStatus.UNDER_REVIEW) {
+		// Loan should be pending
+		if (loan.getStatus() != LoanStatus.UNDER_REVIEW) {
 
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse(
-                            "FAILED",
-                            "Loan is already processed."));
-        }
+			return ResponseEntity.badRequest().body(new ApiResponse("FAILED", "Loan is already processed."));
+		}
 
-        // Update loan
-        loan.setStatus(LoanStatus.REJECTED);
-        loan.setRejectedBy(jwt.getUserId());
-        loan.setRejectionDate(LocalDateTime.now());
-        loan.setRejectionReason(request.getRejectionReason());
+		// Update loan
+		loan.setStatus(LoanStatus.REJECTED);
+		loan.setRejectedBy(jwt.getUserId());
+		loan.setRejectionDate(LocalDateTime.now());
+		loan.setRejectionReason(request.getRejectionReason());
 
-        Loan savedLoan = loanRepository.save(loan);
+		Loan savedLoan = loanRepository.save(loan);
 
-        return ResponseEntity.ok(mapLoanResponse(savedLoan));
-    }
+		return ResponseEntity.ok(mapLoanResponse(savedLoan));
+	}
 
+	// disburse loan to customer
+	@Override
+	public ResponseEntity<?> disburseLoan(Long loanId) {
 
-    //disburse loan to customer
-    @Override
-    public ResponseEntity<?> disburseLoan(Long loanId) {
+		// Logged-in employee
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Logged-in employee
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
 
-        JwtDTO jwt =
-                (JwtDTO) authentication.getPrincipal();
+		// Find Loan
+		Loan loan = loanRepository.findById(loanId).orElseThrow(() -> new RuntimeException("Loan not found"));
 
-        // Find Loan
-        Loan loan = loanRepository.findById(loanId)
-                .orElseThrow(() ->
-                        new RuntimeException("Loan not found"));
+		// Loan must be approved
+		if (loan.getStatus() != LoanStatus.APPROVED) {
+			return ResponseEntity.badRequest().body(new ApiResponse("FAILED", "Only approved loans can be disbursed."));
+		}
 
-        // Loan must be approved
-        if (loan.getStatus() != LoanStatus.APPROVED) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse(
-                            "FAILED",
-                            "Only approved loans can be disbursed."));
-        }
+		// Find customer's savings account
+		Account account = accountRepository.findByCustomerAndAccountType(loan.getCustomer(), AccountType.SAVINGS);
 
-        // Find customer's savings account
-        Account account = accountRepository.findByCustomerAndAccountType(
-                loan.getCustomer(),
-                AccountType.SAVINGS);
+		if (account == null) {
+			return ResponseEntity.badRequest()
+					.body(new ApiResponse("FAILED", "Customer does not have a Savings Account."));
+		}
 
-        if (account == null) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse(
-                            "FAILED",
-                            "Customer does not have a Savings Account."));
-        }
+		// Account must be active
+		if (account.getStatus() != AccountStatus.ACTIVE) {
+			return ResponseEntity.badRequest().body(new ApiResponse("FAILED", "Customer account is not active."));
+		}
 
-        // Account must be active
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            return ResponseEntity.badRequest()
-                    .body(new ApiResponse(
-                            "FAILED",
-                            "Customer account is not active."));
-        }
+		// Credit loan amount
+		account.setBalance(account.getBalance().add(loan.getAmount()));
 
-        // Credit loan amount
-        account.setBalance(
-                account.getBalance().add(loan.getAmount()));
+		accountRepository.save(account);
 
-        accountRepository.save(account);
+		// Create transaction
+		Transaction transaction = new Transaction();
 
-        // Create transaction
-        Transaction transaction = new Transaction();
+		transaction.setFromAccount(null);
 
-        transaction.setFromAccount(null);
+		transaction.setToAccount(account);
 
-        transaction.setToAccount(account);
+		transaction.setAmount(loan.getAmount());
 
-        transaction.setAmount(loan.getAmount());
+		transaction.setTransactionType(TransactionType.LOAN_DISBURSEMENT);
 
-        transaction.setTransactionType(TransactionType.LOAN_DISBURSEMENT);
+		transaction.setReferenceNumber(UUID.randomUUID().toString());
 
-        transaction.setReferenceNumber(UUID.randomUUID().toString());
+		transaction.setRemarks("Loan Disbursed");
 
-        transaction.setRemarks("Loan Disbursed");
+		transaction.setStatus(TransactionStatus.SUCCESS);
 
-        transaction.setStatus(TransactionStatus.SUCCESS);
+		transactionRepository.save(transaction);
 
-        transactionRepository.save(transaction);
+		// Activate loan
+		loan.setStatus(LoanStatus.ACTIVE);
 
-        // Activate loan
-        loan.setStatus(LoanStatus.ACTIVE);
+		LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime now = LocalDateTime.now();
+		loan.setStartDate(now);
+		loan.setDisbursedDate(now);
+		loan.setEndDate(now.plusMonths(loan.getTenureMonths()));
 
-        loan.setStartDate(now);
-        loan.setDisbursedDate(now);
-        loan.setEndDate(now.plusMonths(loan.getTenureMonths()));
+		loanRepository.save(loan);
 
-        loanRepository.save(loan);
-        
-        emiScheduleService.generateSchedule(loan);
+		emiScheduleService.generateSchedule(loan);
 
-        return ResponseEntity.ok(mapLoanResponse(loan));
-    }
-    
-    
-    // ================= Helper Method =================
-    private LoanResponseDto mapLoanResponse(Loan loan) {
+		return ResponseEntity.ok(mapLoanResponse(loan));
+	}
 
-        LoanResponseDto dto =
-                mapper.map(loan, LoanResponseDto.class);
+	// ================= Helper Method =================
+	private LoanResponseDto mapLoanResponse(Loan loan) {
 
-        dto.setLoanType(loan.getLoanType().getLoanName());
+		LoanResponseDto dto = mapper.map(loan, LoanResponseDto.class);
 
-        dto.setCustomerId(loan.getCustomer().getCustomerId());
+		dto.setLoanType(loan.getLoanType().getLoanName());
 
-        dto.setCustomerName(
-                loan.getCustomer().getFirstName()
-                + " "
-                + loan.getCustomer().getLastName());
+		dto.setCustomerId(loan.getCustomer().getCustomerId());
 
-        dto.setMobile(loan.getCustomer().getMobile());
+		dto.setCustomerName(loan.getCustomer().getFirstName() + " " + loan.getCustomer().getLastName());
+
+		dto.setMobile(loan.getCustomer().getMobile());
 
         return dto;
     }
@@ -533,8 +479,6 @@ public class LoanServiceImpl implements LoanService {
                 new ApiResponse(
                         "SUCCESS",
                         "EMI paid successfully."));
-    }
-    
-    
+	}
 
 }
