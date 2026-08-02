@@ -8,7 +8,7 @@ spring:
     # username: ${DB_USERNAME}
     username: root
     # password: ${DB_PASSWORD}
-    password: Pass@123
+    password: "Pass@123"
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:

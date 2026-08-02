@@ -6,7 +6,9 @@ import com.finix.account.entity.Account;
 import com.finix.account.entity.AccountStatus;
 import com.finix.account.entity.AccountType;
 import com.finix.account.repository.AccountRepository;
+import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
+import com.finix.auth.entity.Role;
 import com.finix.auth.entity.User;
 import com.finix.auth.repository.UserRepository;
 import com.finix.common.exception.AccessDeniedException;
@@ -122,7 +124,7 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public AccountResponse getAccountById(Long accountId) {
+    public ApiResponse getAccountById(Long accountId) {
 
     	Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
@@ -134,6 +136,11 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() ->
                         new RuntimeException("Account not found"));
+        if(account.getAccountNumber().equals(0000000000000)) {
+        	if(!jwtDTO.getRoleName().equals(Role.MANAGER)) {
+        		return new ApiResponse("failure","You cant access this account");
+        	}
+        }
 
         Long ownerId = account.getCustomer()
                               .getUser()
@@ -150,12 +157,12 @@ public class AccountServiceImpl implements AccountService {
 
 //        response.setCustomerId(account.getCustomer().getUser().getUserId());
 
-        return response;
+        return new ApiResponse("success",response);
     }
     
     
     @Override
-    public AccountResponse getAccountByNumber(String accountNumber) {
+    public ApiResponse getAccountByNumber(String accountNumber) {
 
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
@@ -167,6 +174,11 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() ->
                         new RuntimeException("Account not found"));
+        if(account.getAccountNumber().equals(0000000000000)) {
+        	if(!jwtDTO.getRoleName().equals(Role.MANAGER)) {
+        		return new ApiResponse("failure","You cant access this account");
+        	}
+        }
 
         Long ownerId = account.getCustomer()
                               .getUser()
@@ -177,11 +189,11 @@ public class AccountServiceImpl implements AccountService {
                     "You are not authorized to access this account.");
         }
 
-        return modelMapper.map(account, AccountResponse.class);
+        return new ApiResponse("success", modelMapper.map(account, AccountResponse.class));
     }
     
     @Override
-    public List<AccountResponse> getAccountsByCustomer(Long customerId) {
+    public ApiResponse getAccountsByCustomer(Long customerId) {
     	Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
@@ -203,7 +215,7 @@ public class AccountServiceImpl implements AccountService {
         List<Account> accounts =
                 accountRepository.findByCustomer(customer);
 
-        return accounts.stream()
+        return new ApiResponse("success", accounts.stream()
                 .map(account -> {
 
                     AccountResponse response =
@@ -214,7 +226,7 @@ public class AccountServiceImpl implements AccountService {
                     return response;
 
                 })
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
 	@Override
