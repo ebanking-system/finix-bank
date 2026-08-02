@@ -5,6 +5,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.finix.loan.dto.LoanRequestDto;
+import com.finix.loan.dto.PayEmiRequestDto;
 import com.finix.loan.dto.RejectLoanRequestDto;
 import com.finix.loan.service.LoanService;
 
@@ -64,5 +65,21 @@ public class LoanController {
         return loanService.disburseLoan(loanId);
     }
     
+    //Get all repayments for customer
+    @GetMapping("/{loanId}/repayments")
+    public ResponseEntity<?> getRepayments(
+            @PathVariable Long loanId) {
+
+        return loanService.getRepayments(loanId);
+    }
+    
+    //pay EMI for customer
+    @PostMapping("/repayments/{repaymentId}/pay")
+    public ResponseEntity<?> payEmi(
+            @PathVariable Long repaymentId,
+            @Valid @RequestBody PayEmiRequestDto request) {
+
+        return loanService.payEmi(repaymentId, request);
+    }
     
 }
