@@ -54,13 +54,12 @@ public class LoanServiceImpl implements LoanService {
 
 	private final ModelMapper mapper;
 
-    private final TransactionRepository transactionRepository;
-    
-    private final EmiScheduleService emiScheduleService;
-    
-    private final LoanRepaymentRepository loanRepaymentRepository;
-    
-    
+	private final TransactionRepository transactionRepository;
+
+	private final EmiScheduleService emiScheduleService;
+
+	private final LoanRepaymentRepository loanRepaymentRepository;
+
 	private final EmiCalculatorService emiCalculatorService;
 
 	private final AccountRepository accountRepository;
