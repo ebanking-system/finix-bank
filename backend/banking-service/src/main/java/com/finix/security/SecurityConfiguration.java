@@ -78,8 +78,6 @@ public class SecurityConfiguration {
 		.hasRole("EMPLOYEE")
 		.requestMatchers(HttpMethod.PUT, "/api/loans/*/disburse")
 		.hasRole("EMPLOYEE")
-		.requestMatchers(HttpMethod.POST,"/api/loans/repayments/*/pay")
-		.hasRole("CUSTOMER")
 		//Loan api endpoints end
 		.requestMatchers(HttpMethod.GET,"/appointments","/patients")
 		.hasRole("ADMIN")

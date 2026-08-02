@@ -7,12 +7,9 @@ import org.springframework.stereotype.Repository;
 
 import com.finix.loan.entity.Loan;
 import com.finix.loan.entity.LoanRepayment;
-import com.finix.loan.entity.RepaymentStatus;
 
 @Repository
 public interface LoanRepaymentRepository extends JpaRepository<LoanRepayment, Long>{
 	
 	List<LoanRepayment> findByLoanOrderByEmiNumberAsc(Loan loan);
-	
-	List<LoanRepayment> findByLoanAndStatusOrderByEmiNumberAsc(Loan loan,RepaymentStatus status);
 }

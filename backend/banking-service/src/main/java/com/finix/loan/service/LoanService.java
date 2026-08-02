@@ -2,9 +2,7 @@ package com.finix.loan.service;
 
 import org.springframework.http.ResponseEntity;
 
-import com.finix.account.entity.AccountType;
 import com.finix.loan.dto.LoanRequestDto;
-import com.finix.loan.dto.PayEmiRequestDto;
 import com.finix.loan.dto.RejectLoanRequestDto;
 
 
@@ -26,9 +24,4 @@ public interface LoanService {
     //Loan dispurse to customer account
     ResponseEntity<?> disburseLoan(Long loanId);
 
-    //get all repayments
-    ResponseEntity<?> getRepayments(Long loanId);
-
-    //pay EMIs
-    ResponseEntity<?> payEmi(Long repaymentId,PayEmiRequestDto request);
 }
