@@ -25,6 +25,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,16 +36,17 @@ import lombok.ToString;
 @Table(name = "loans")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = { "loanType", "repayments","customer" }) 
+@ToString(exclude = { "loanType", "repayments", "customer" })
 @EqualsAndHashCode(exclude = { "loanType", "repayments", "customer" })
 public class Loan {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "loan_id")
-    private Integer loanId;
+    private Long loanId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
@@ -73,6 +75,9 @@ public class Loan {
 
     @Column(name = "approval_date")
     private LocalDateTime approvalDate;
+    
+    @Column(name = "approved_by")
+    private Long approvedBy;
 
     @Column(name = "start_date")
     private LocalDateTime startDate;
@@ -82,6 +87,18 @@ public class Loan {
 
     @Column(name = "remaining_amount", precision = 15, scale = 2)
     private BigDecimal remainingAmount;
+    
+    @Column(name = "rejection_reason", length = 255)
+    private String rejectionReason;
+
+    @Column(name = "rejected_by")
+    private Long rejectedBy;
+
+    @Column(name = "rejection_date")
+    private LocalDateTime rejectionDate;
+    
+    @Column(name = "disbursed_date")
+    private LocalDateTime disbursedDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
