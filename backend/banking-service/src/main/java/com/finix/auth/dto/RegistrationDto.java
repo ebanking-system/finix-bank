@@ -22,4 +22,6 @@ public class RegistrationDto {
 	 private LocalDate dob;
 	 private String mobile;
 	 private String address;
+	 private String aadharNum;	
+	 private String panNum;
 }
