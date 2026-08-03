@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -81,10 +80,12 @@ public class SecurityConfiguration {
 		.requestMatchers(HttpMethod.POST,"/api/loans/repayments/*/pay")
 		.hasRole("CUSTOMER")
 		//Loan api endpoints end
-		.requestMatchers(HttpMethod.GET,"/appointments","/patients")
-		.hasRole("ADMIN")
-		.requestMatchers(HttpMethod.PATCH,"/appointments/complete")
-		.hasRole("DOCTOR")
+		//Customer api endpoints
+		.requestMatchers(HttpMethod.GET, "/api/customers/profile")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.PATCH, "/api/customers/profile")
+		.hasRole("CUSTOMER")
+		//Customer api endpoints end
 		.anyRequest().authenticated()
 		);
 		//add custom jwt verification filter before - UsernamePasswordAuthFilter
