@@ -1,6 +1,8 @@
 package com.finix.auth.service;
 
 
+import java.time.LocalDateTime;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,10 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.AuthRequest;
 import com.finix.auth.dto.AuthResponse;
+import com.finix.auth.dto.RegistrationDto;
+import com.finix.auth.entity.User;
 import com.finix.auth.repository.UserRepository;
+import com.finix.customer.entity.Customer;
+import com.finix.customer.repository.CustomerRepository;
+import com.finix.kyc.entity.KycDocuments;
+import com.finix.kyc.entity.Status;
+import com.finix.kyc.repository.KycDocumentRepository;
 import com.finix.security.CustomUserDetailsImpl;
 import com.finix.security.JwtUtils;
-
+import com.finix.security.SecurityConfiguration;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,6 +34,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor //init final fields
 @Slf4j
 public class UserServiceImpl implements UserService {
+
+    private final KycDocumentRepository kycDocumentRepository;
+
+    private final CustomerRepository customerRepository;
+
+    private final SecurityConfiguration securityConfiguration;
 	//depcy - using constr based D.I
 	private final UserRepository userRepository;
 	//depcy - ModelMapper
@@ -31,6 +47,8 @@ public class UserServiceImpl implements UserService {
 	private final PasswordEncoder encoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
+
+
 	
 
 	@Override
@@ -69,6 +87,35 @@ public class UserServiceImpl implements UserService {
 		.stream() //Stream<User>
 		.forEach(user -> user.setPasswordHash(encoder.encode(user.getPasswordHash())));
 		return new ApiResponse("Success", "Password encoded");
+	}
+
+	@Override
+	@Transactional
+	public ApiResponse registration(@Valid RegistrationDto registrationDto) {
+		if(userRepository.existsByEmail(registrationDto.getEmail())) {
+			return new ApiResponse("Failure","Account Already Exist");
+		}
+		try {
+			User user=mapper.map(registrationDto, User.class);
+			user.setPasswordHash(encoder.encode(user.getPasswordHash()));
+			userRepository.save(user);
+			System.out.print("User : "+user);
+			Customer customer=mapper.map(registrationDto, Customer.class);
+			customer.setUser(user);
+			customerRepository.save(customer);		
+			System.out.print("Customer : "+customer);
+			KycDocuments kycEntity=mapper.map(registrationDto,KycDocuments.class);
+			kycEntity.setCustomer(customer);
+			kycEntity.setStatus(Status.PENDING);
+			kycEntity.setSelfImage("myImage.png");
+			kycEntity.setSubmittedDate(LocalDateTime.now());
+			kycDocumentRepository.save(kycEntity);
+			System.out.print("KYC Entity : "+kycEntity);
+		}catch(Exception ex) {
+			return new ApiResponse("Failure",ex.getMessage());
+		}
+		
+		return new ApiResponse("Succuss","User Created Succussfully");
 	}
 	
 }

@@ -4,6 +4,8 @@ import com.finix.account.dto.AccountResponse;
 import com.finix.account.dto.CreateAccountRequest;
 import com.finix.account.entity.AccountType;
 import com.finix.account.service.AccountService;
+import com.finix.auth.dto.ApiResponse;
+
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -39,7 +41,7 @@ public class AccountController {
     }
     
     @GetMapping("/{accountId}")
-    public ResponseEntity<AccountResponse> getAccountById(
+    public ResponseEntity<ApiResponse> getAccountById(
             @PathVariable Long accountId) {
 
         return ResponseEntity.ok(
@@ -47,7 +49,7 @@ public class AccountController {
     }
 
     @GetMapping("/number/{accountNumber}")
-    public ResponseEntity<AccountResponse> getAccountByNumber(
+    public ResponseEntity<ApiResponse> getAccountByNumber(
             @PathVariable String accountNumber) {
 
         return ResponseEntity.ok(
@@ -55,7 +57,7 @@ public class AccountController {
     }
     
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<AccountResponse>> getAccountsByCustomer(
+    public ResponseEntity<ApiResponse> getAccountsByCustomer(
             @PathVariable Long customerId) {
 
         return ResponseEntity.ok(

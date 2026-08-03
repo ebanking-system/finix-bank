@@ -1,6 +1,7 @@
 package com.finix.beneficiary.service;
 
 import java.util.ArrayList;
+
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.finix.account.repository.AccountRepository;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
 import com.finix.auth.entity.User;
@@ -32,6 +34,7 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
     private final PasswordEncoder passwordEncoder;
 	private final BeneficiaryRepository beneficiaryRepository;
 	private final CustomerRepository customerRepository;
+	private final AccountRepository accountRepository;
 	private final ModelMapper modelMapper;
 
    
@@ -40,23 +43,22 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
 		
 		Authentication authentication =
     	        SecurityContextHolder.getContext().getAuthentication();
-
-//    	CustomUserDetailsImpl user =
-//    	        (CustomUserDetailsImpl) authentication.getPrincipal();
     	
     	JwtDTO jwt =
         		(JwtDTO) authentication.getPrincipal();
 
     	Customer customer = customerRepository.findById(jwt.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
-		
+		if(!accountRepository.existsByAccountNumber(dto.getAccountNumber())) {
+			return ResponseEntity.badRequest().body(new ApiResponse("Failure","Beneficiary Account not found"));
+		}
 		Beneficiary entity=modelMapper.map(dto,Beneficiary.class);
 		entity.setCustomer(customer);
 		// TODO Auto-generated method stub
 		try {
 			beneficiaryRepository.save(entity);
-			return ResponseEntity.ok("Saved Successfully");
+			return ResponseEntity.ok(new ApiResponse("success","Saved Successfully"));
 		}catch(RuntimeException ex) {
-			return ResponseEntity.badRequest().body(ex.getMessage());
+			return ResponseEntity.badRequest().body(new ApiResponse("failure",ex.getMessage()));
 		}
 		
 	}
@@ -89,17 +91,27 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
 		if(resp.isEmpty()) {
 			return ResponseEntity.noContent().build();
 		}
-		return ResponseEntity.ok(resp);
+		return ResponseEntity.ok(new ApiResponse("succuss","Beneficiary Account not found"));
 	}
 	@Override
 	public ResponseEntity<?> updateBeneficiary(Long id,String name) {
 		// TODO Auto-generated method stub
+		Authentication authentication =
+    	        SecurityContextHolder.getContext().getAuthentication();
+    	
+    	JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
+
+    	Customer customer = customerRepository.findById(jwt.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
 		Beneficiary entity = beneficiaryRepository.findById(id).orElseThrow();
+		if(!customer.getCustomerId().equals(entity.getCustomer().getCustomerId())) {
+			return ResponseEntity.badRequest().body(new ApiResponse("failure","Beneficiary not found"));
+		}
 		if(entity ==null) {
-			return ResponseEntity.badRequest().body("Beneficiary not found");
+			return ResponseEntity.badRequest().body(new ApiResponse("failure","Beneficiary not found"));
 		}
 		entity.setBeneficiaryName(name);
-		return ResponseEntity.ok("Updation Successfull..!");
+		return ResponseEntity.ok(new ApiResponse("succuss","Updation Successfull..!"));
 	}
 	
 }

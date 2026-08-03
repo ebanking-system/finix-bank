@@ -6,7 +6,12 @@ import com.finix.account.entity.Account;
 import com.finix.account.entity.AccountStatus;
 import com.finix.account.entity.AccountType;
 import com.finix.account.repository.AccountRepository;
+import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
+import com.finix.auth.entity.Role;
+import com.finix.auth.entity.User;
+import com.finix.auth.repository.UserRepository;
+import com.finix.common.exception.AccessDeniedException;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
 import com.finix.kyc.entity.KycDocuments;
@@ -119,70 +124,98 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public AccountResponse getAccountById(Long accountId) {
+    public ApiResponse getAccountById(Long accountId) {
+
+    	Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        JwtDTO jwtDTO = (JwtDTO) authentication.getPrincipal();
+
+        Long loggedInUserId = jwtDTO.getUserId();
 
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() ->
                         new RuntimeException("Account not found"));
+        if(account.getAccountNumber().equals(0000000000000)) {
+        	if(!jwtDTO.getRoleName().equals(Role.MANAGER)) {
+        		return new ApiResponse("failure","You cant access this account");
+        	}
+        }
 
-//        private Long accountId;
-//
-//        private String accountNumber;
-//
-//        private AccountType accountType;
-//
-//        private BigDecimal balance;
-//
-//        private String ifscCode;
-//
-//        private AccountStatus status;
-//
-//        private Long customerId;
+        Long ownerId = account.getCustomer()
+                              .getUser()
+                              .getUserId();
 
-//        private LocalDateTime createdDate;
-//        AccountResponse resp=new AccountResponse();
-//        resp.setAccountId(account.getAccountId());
-//        resp.setAccountNumber(account.getAccountNumber());
-//        resp.setAccountType(account.getAccountType());
-//        resp.setBalance(account.getBalance());
-//        resp.setIfscCode(account.getIfscCode());
-//        resp.setStatus(account.getStatus());
-//        resp.setCreatedDate(account.getCreatedDate());
+        if (!ownerId.equals(loggedInUserId)) {
+            throw new AccessDeniedException(
+                    "You are not authorized to access this account.");
+        }
+        
         
         AccountResponse response =
                 modelMapper.map(account, AccountResponse.class);
 
 //        response.setCustomerId(account.getCustomer().getUser().getUserId());
 
-        return response;
+        return new ApiResponse("success",response);
     }
     
+    
     @Override
-    public AccountResponse getAccountByNumber(String accountNumber) {
+    public ApiResponse getAccountByNumber(String accountNumber) {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        JwtDTO jwtDTO = (JwtDTO) authentication.getPrincipal();
+
+        Long loggedInUserId = jwtDTO.getUserId();
 
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() ->
                         new RuntimeException("Account not found"));
+        if(account.getAccountNumber().equals(0000000000000)) {
+        	if(!jwtDTO.getRoleName().equals(Role.MANAGER)) {
+        		return new ApiResponse("failure","You cant access this account");
+        	}
+        }
 
-        AccountResponse response =
-                modelMapper.map(account, AccountResponse.class);
+        Long ownerId = account.getCustomer()
+                              .getUser()
+                              .getUserId();
 
-//        response.setCustomerId(account.getCustomer().getUser().getUserId());
+        if (!ownerId.equals(loggedInUserId)) {
+            throw new AccessDeniedException(
+                    "You are not authorized to access this account.");
+        }
 
-        return response;
+        return new ApiResponse("success", modelMapper.map(account, AccountResponse.class));
     }
     
     @Override
-    public List<AccountResponse> getAccountsByCustomer(Long customerId) {
+    public ApiResponse getAccountsByCustomer(Long customerId) {
+    	Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        JwtDTO jwtDTO = (JwtDTO) authentication.getPrincipal();
+
+        Long loggedInUserId = jwtDTO.getUserId();
+        
+        Customer loggedCustomer=customerRepository.findById(loggedInUserId).orElseThrow(() ->new RuntimeException("Customer not found"));
+        
 
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() ->
                         new RuntimeException("Customer not found"));
+        if(!customer.getCustomerId().equals(loggedCustomer.getCustomerId())) {
+        	throw new AccessDeniedException(
+                    "You are not authorized to access this account.");
+        }
 
         List<Account> accounts =
                 accountRepository.findByCustomer(customer);
 
-        return accounts.stream()
+        return new ApiResponse("success", accounts.stream()
                 .map(account -> {
 
                     AccountResponse response =
@@ -193,7 +226,7 @@ public class AccountServiceImpl implements AccountService {
                     return response;
 
                 })
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
 	@Override

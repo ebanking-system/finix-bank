@@ -46,8 +46,6 @@ import lombok.RequiredArgsConstructor;
 public class TransactionServiceImpl implements TransactionService{
 
     private final ModelMapper modelMapper;
-
-
 	private final TransactionRepository transactionRepository;
 	private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
@@ -207,7 +205,7 @@ public class TransactionServiceImpl implements TransactionService{
 			transaction.setRemarks(remarks);
 			
 			transactionRepository.save(transaction);
-}
+    }
 
     @Override
     public Page<GetAllTransactionsDto> getTransactions(
@@ -222,9 +220,6 @@ public class TransactionServiceImpl implements TransactionService{
 
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
-
-//        CustomUserDetailsImpl user =
-//                (CustomUserDetailsImpl) authentication.getPrincipal();
 
         JwtDTO jwt =
         		(JwtDTO) authentication.getPrincipal();
