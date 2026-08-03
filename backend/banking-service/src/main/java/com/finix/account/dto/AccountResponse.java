@@ -24,6 +24,5 @@ public class AccountResponse {
 
     private AccountStatus status;
 
-
     private LocalDateTime createdDate;
 }

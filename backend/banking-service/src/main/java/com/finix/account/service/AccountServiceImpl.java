@@ -136,8 +136,10 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() ->
                         new RuntimeException("Account not found"));
-        if(account.getAccountNumber().equals(0000000000000)) {
+        System.out.print("Account : "+account);
+        if(account.getAccountNumber().equals("0000000000000")) {
         	if(!jwtDTO.getRoleName().equals(Role.MANAGER)) {
+        		System.out.println("failure You cant access this account");
         		return new ApiResponse("failure","You cant access this account");
         	}
         }
@@ -147,15 +149,18 @@ public class AccountServiceImpl implements AccountService {
                               .getUserId();
 
         if (!ownerId.equals(loggedInUserId)) {
+        	System.out.println("You are not authorized to access this account.");
             throw new AccessDeniedException(
                     "You are not authorized to access this account.");
         }
         
+        System.out.print(account);
         
         AccountResponse response =
                 modelMapper.map(account, AccountResponse.class);
 
 //        response.setCustomerId(account.getCustomer().getUser().getUserId());
+        
 
         return new ApiResponse("success",response);
     }

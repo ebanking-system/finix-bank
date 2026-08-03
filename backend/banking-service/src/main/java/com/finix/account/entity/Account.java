@@ -31,7 +31,7 @@ public class Account {
     private Long accountId;
 
     @NotNull(message = "Customer is mandatory")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "customer_id", referencedColumnName = "customer_id", nullable = false)
     private Customer customer;
 
