@@ -25,11 +25,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Setter
 @Getter
-@ToString
+@ToString(exclude = "customer")
 @Entity
 @Table(name = "kyc_documents")
 public class KycDocuments {

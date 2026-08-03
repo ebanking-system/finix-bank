@@ -1,6 +1,8 @@
 package com.finix.auth.service;
 
 
+import java.time.LocalDateTime;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,6 +19,9 @@ import com.finix.auth.entity.User;
 import com.finix.auth.repository.UserRepository;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
+import com.finix.kyc.entity.KycDocuments;
+import com.finix.kyc.entity.Status;
+import com.finix.kyc.repository.KycDocumentRepository;
 import com.finix.security.CustomUserDetailsImpl;
 import com.finix.security.JwtUtils;
 import com.finix.security.SecurityConfiguration;
@@ -30,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
+    private final KycDocumentRepository kycDocumentRepository;
+
     private final CustomerRepository customerRepository;
 
     private final SecurityConfiguration securityConfiguration;
@@ -40,6 +47,7 @@ public class UserServiceImpl implements UserService {
 	private final PasswordEncoder encoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
+
 
 	
 
@@ -96,6 +104,13 @@ public class UserServiceImpl implements UserService {
 			customer.setUser(user);
 			customerRepository.save(customer);		
 			System.out.print("Customer : "+customer);
+			KycDocuments kycEntity=mapper.map(registrationDto,KycDocuments.class);
+			kycEntity.setCustomer(customer);
+			kycEntity.setStatus(Status.PENDING);
+			kycEntity.setSelfImage("myImage.png");
+			kycEntity.setSubmittedDate(LocalDateTime.now());
+			kycDocumentRepository.save(kycEntity);
+			System.out.print("KYC Entity : "+kycEntity);
 		}catch(Exception ex) {
 			return new ApiResponse("Failure",ex.getMessage());
 		}
