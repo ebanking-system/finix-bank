@@ -10,4 +10,6 @@ public interface KycDocumentRepository extends JpaRepository<KycDocuments, Long>
 
 	KycDocuments findByCustomer(Customer customer);
 
+//	KycDocuments findByCustomerID(Long customerId);
+
 }
