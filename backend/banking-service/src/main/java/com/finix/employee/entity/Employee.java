@@ -1,12 +1,12 @@
 package com.finix.employee.entity;
 
 import com.finix.auth.entity.User;
-import com.finix.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+@ToString(exclude = "user")
 @Getter
 @Setter
 @Builder
@@ -17,6 +17,9 @@ import lombok.*;
 public class Employee {
 
 	@Id
+    @Column(name = "employee_id")
+    private Long employeeId;
+
     @JoinColumn(name = "employee_id")
     @MapsId
     @OneToOne
