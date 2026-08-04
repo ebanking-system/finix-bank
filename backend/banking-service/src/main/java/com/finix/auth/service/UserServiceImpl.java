@@ -10,15 +10,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.finix.account.service.AccountServiceImpl;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.AuthRequest;
 import com.finix.auth.dto.AuthResponse;
 import com.finix.auth.dto.RegistrationDto;
+import com.finix.auth.entity.Role;
 import com.finix.auth.entity.User;
 import com.finix.auth.repository.UserRepository;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
+import com.finix.employee.entity.Employee;
+import com.finix.employee.repository.EmployeeRepository;
 import com.finix.kyc.entity.KycDocuments;
 import com.finix.kyc.entity.Status;
 import com.finix.kyc.repository.KycDocumentRepository;
@@ -35,9 +38,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
+    private final AccountServiceImpl accountServiceImpl;
+
     private final KycDocumentRepository kycDocumentRepository;
 
     private final CustomerRepository customerRepository;
+    
+    private final EmployeeRepository employeeRepository;
 
     private final SecurityConfiguration securityConfiguration;
 	//depcy - using constr based D.I
@@ -47,8 +54,6 @@ public class UserServiceImpl implements UserService {
 	private final PasswordEncoder encoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
-
-
 	
 
 	@Override
@@ -92,25 +97,39 @@ public class UserServiceImpl implements UserService {
 	@Override
 	@Transactional
 	public ApiResponse registration(@Valid RegistrationDto registrationDto) {
-		if(userRepository.existsByEmail(registrationDto.getEmail())) {
-			return new ApiResponse("Failure","Account Already Exist");
+		try {
+			if(userRepository.existsByEmail(registrationDto.getEmail())) {
+				System.out.print("inside other role");
+				return new ApiResponse("Failure","Account Already Exist");
+			}			
+		}catch(Exception ex) {
+			System.out.print(ex.getMessage());
 		}
 		try {
 			User user=mapper.map(registrationDto, User.class);
 			user.setPasswordHash(encoder.encode(user.getPasswordHash()));
-			userRepository.save(user);
-			System.out.print("User : "+user);
-			Customer customer=mapper.map(registrationDto, Customer.class);
-			customer.setUser(user);
-			customerRepository.save(customer);		
-			System.out.print("Customer : "+customer);
-			KycDocuments kycEntity=mapper.map(registrationDto,KycDocuments.class);
-			kycEntity.setCustomer(customer);
-			kycEntity.setStatus(Status.PENDING);
-			kycEntity.setSelfImage("myImage.png");
-			kycEntity.setSubmittedDate(LocalDateTime.now());
-			kycDocumentRepository.save(kycEntity);
-			System.out.print("KYC Entity : "+kycEntity);
+			User userEntity=userRepository.save(user);
+			if(registrationDto.getRole().equals(Role.CUSTOMER)) {
+				
+				System.out.print("User : "+user);
+				Customer customer=mapper.map(registrationDto, Customer.class);
+				customer.setUser(user);
+				customerRepository.save(customer);		
+				System.out.print("Customer : "+customer);
+				KycDocuments kycEntity=mapper.map(registrationDto,KycDocuments.class);
+				kycEntity.setCustomer(customer);
+				kycEntity.setStatus(Status.PENDING);
+				kycEntity.setSelfImage("myImage.png");
+				kycEntity.setSubmittedDate(LocalDateTime.now());
+				kycDocumentRepository.save(kycEntity);
+				accountServiceImpl.createAccount(registrationDto.getAccountType(),customer);
+				System.out.print("KYC Entity : "+kycEntity);
+			}else {
+				
+				Employee employee = mapper.map(registrationDto, Employee.class);
+				employee.setUser(userEntity);
+				employeeRepository.save(employee);
+			}
 		}catch(Exception ex) {
 			return new ApiResponse("Failure",ex.getMessage());
 		}

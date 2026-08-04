@@ -25,11 +25,11 @@ public class EmployeeController {
 
 	private final EmployeeService employeeService;
 
-	@PostMapping("/signup")
-	public ResponseEntity<ApiResponse> registerEmployee(
-			@Valid @RequestBody EmployeeRegistrationDto request) {
-		return ResponseEntity.ok(employeeService.registerEmployee(request));
-	}
+//	@PostMapping("/signup")
+//	public ResponseEntity<ApiResponse> registerEmployee(
+//			@Valid @RequestBody EmployeeRegistrationDto request) {
+//		return ResponseEntity.ok(employeeService.registerEmployee(request));
+//	}
 
 	@GetMapping("/profile")
 	public ResponseEntity<ApiResponse> getMyProfile() {

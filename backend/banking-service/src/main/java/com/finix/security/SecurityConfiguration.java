@@ -62,6 +62,8 @@ public class SecurityConfiguration {
 		.hasRole("CUSTOMER")
 //		.requestMatchers(HttpMethod.GET, "/api/beneficiary")
 //		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.GET, "/api/accounts","/api/transaction")
+		.hasAnyRole("CUSTOMER","EMPLOYEE","MANAGER")
 		//Loan api endpoints
 		.requestMatchers(HttpMethod.POST, "/api/loans/apply")
 		.hasRole("CUSTOMER")
@@ -89,7 +91,7 @@ public class SecurityConfiguration {
 		//Employee api endpoints
 		.requestMatchers(HttpMethod.GET, "/api/employees/profile")
 		.hasAnyRole("EMPLOYEE","MANAGER")
-		.requestMatchers(HttpMethod.PATCH, "/api/employees/profile")
+		.requestMatchers(HttpMethod.PATCH, "/api/employees/profile","/api/kyc/**")
 		.hasAnyRole("EMPLOYEE","MANAGER")
 		.requestMatchers(HttpMethod.GET, "/api/employees")
 		.hasRole("MANAGER")

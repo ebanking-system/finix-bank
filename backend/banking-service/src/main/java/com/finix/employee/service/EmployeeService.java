@@ -7,7 +7,7 @@ import com.finix.employee.dto.UpdateEmployeeRequest;
 
 public interface EmployeeService {
 
-	ApiResponse registerEmployee(EmployeeRegistrationDto request);
+//	ApiResponse registerEmployee(EmployeeRegistrationDto request);
 
 	ApiResponse getMyProfile();
 
