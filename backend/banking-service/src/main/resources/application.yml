@@ -37,7 +37,7 @@
 
 spring:
   application:
-    name: ebankingsystem
+    name: BANKING-SERVICE
 
   datasource:
     url: jdbc:mysql://localhost:3306/bank
@@ -55,14 +55,28 @@ spring:
 jwt:
   exp:
     time: 7200000
+
   secret:
     key: 62d42698ee3ade259800a37310970af1c16a421e5d44f4b0d7831ed714377e4f
 
 server:
+  port: 8081
+
   error:
     include-message: always
     include-binding-errors: always
     include-stacktrace: always
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+    register-with-eureka: true
+    fetch-registry: true
+
+  instance:
+    prefer-ip-address: true
 
 logging:
   level:

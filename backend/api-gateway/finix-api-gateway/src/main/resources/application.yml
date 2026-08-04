@@ -1,0 +1,91 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: api-gateway
+
+  main:
+    web-application-type: reactive
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+
+            # Authentication APIs
+            - id: auth-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/users/**
+
+            # Account APIs
+            - id: account-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/account/**
+
+            # Transaction APIs
+            - id: transaction-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/transaction/**
+
+            # Beneficiary APIs
+            - id: beneficiary-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/beneficiary/**
+
+            # Customer APIs
+            - id: customer-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/customer/**
+
+            # Employee APIs
+            - id: employee-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/employee/**
+
+            # Loan APIs
+            - id: loan-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/loan/**
+
+            # Card APIs
+            - id: card-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/card/**
+
+            # Fixed Deposit APIs
+            - id: fd-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/fd/**
+
+            # KYC APIs
+            - id: kyc-service
+              uri: lb://BANKING-SERVICE
+              predicates:
+                - Path=/api/kyc/**
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+jwt:
+  secret: 62d42698ee3ade259800a37310970af1c16a421e5d44f4b0d7831ed714377e4f
