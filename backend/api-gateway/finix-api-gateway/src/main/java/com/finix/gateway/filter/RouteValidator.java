@@ -18,8 +18,8 @@ public class RouteValidator {
      */
     public static final List<String> OPEN_API_ENDPOINTS = List.of(
 
-            "/api/auth/login",
-            "/api/auth/register",
+            "/api/auth/signin",
+            "/api/auth/signup",
 
             "/swagger-ui",
 
