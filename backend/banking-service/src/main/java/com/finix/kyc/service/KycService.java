@@ -16,4 +16,6 @@ public interface KycService {
 	ApiResponse updateStatus(Long id , StatusDto status);
 	public ResponseEntity<ApiResponse> uploadKyc(KycUploadRequest request);
 
+	ResponseEntity<?> getKycByStatus(Status status);
+
 }
