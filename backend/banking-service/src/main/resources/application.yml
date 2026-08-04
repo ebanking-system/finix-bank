@@ -52,6 +52,12 @@ spring:
     hibernate:
       ddl-auto: update
 
+  rabbitmq:
+   host: localhost
+   port: 5672
+   username: guest
+   password: guest		
+
 jwt:
   exp:
     time: 7200000
@@ -85,3 +91,6 @@ logging:
 
 file:
   upload-dir: uploads/kyc
+
+notification:
+  queue: notification.queue
