@@ -31,4 +31,6 @@ public interface LoanService {
 
     //pay EMIs
     ResponseEntity<?> payEmi(Long repaymentId,PayEmiRequestDto request);
+    
+    ResponseEntity<?> getDefaultedLoans();
 }

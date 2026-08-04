@@ -1,5 +1,6 @@
 package com.finix.loan.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,4 +16,9 @@ public interface LoanRepaymentRepository extends JpaRepository<LoanRepayment, Lo
 	List<LoanRepayment> findByLoanOrderByEmiNumberAsc(Loan loan);
 	
 	List<LoanRepayment> findByLoanAndStatusOrderByEmiNumberAsc(Loan loan,RepaymentStatus status);
+	
+	List<LoanRepayment> findByStatusAndDueDateBefore(RepaymentStatus status,LocalDateTime dateTime);
+	
+	long countByLoanAndStatus(Loan loan,RepaymentStatus status);
+	
 }

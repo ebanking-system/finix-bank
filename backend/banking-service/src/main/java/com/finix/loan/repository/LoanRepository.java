@@ -16,4 +16,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 	
 	//This is for Employee Role whose designation is LoanOfficer and department Lone
 	List<Loan> findByStatus(LoanStatus status);
+	
+	boolean existsByCustomerAndStatusIn(Customer customer, List<LoanStatus> statuses);
+
+	boolean existsByCustomerAndStatus(Customer customer, LoanStatus defaulted);
 }
