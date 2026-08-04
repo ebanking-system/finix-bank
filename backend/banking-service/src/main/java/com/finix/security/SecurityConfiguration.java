@@ -55,7 +55,7 @@ public class SecurityConfiguration {
 		 */
 		http.authorizeHttpRequests(request ->
 		request.requestMatchers("/v3/api-docs/**","/swagger-ui/**",
-				"/users/signin","/users/signup","/employee/signup","/users/password-encryption","/api/beneficiary")	
+				"/users/signin","/users/signup","/api/employees/signup","/users/password-encryption","/api/beneficiary")	
 		.permitAll()
 		.requestMatchers(HttpMethod.OPTIONS).permitAll()
 		.requestMatchers(HttpMethod.GET, "/api/beneficiary").permitAll()
@@ -63,6 +63,8 @@ public class SecurityConfiguration {
 		.hasRole("CUSTOMER")
 //		.requestMatchers(HttpMethod.GET, "/api/beneficiary")
 //		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.GET, "/api/accounts","/api/transaction")
+		.hasAnyRole("CUSTOMER","EMPLOYEE","MANAGER")
 		//Loan api endpoints
 		.requestMatchers(HttpMethod.POST, "/api/loans/apply")
 		.hasRole("CUSTOMER")
@@ -89,6 +91,29 @@ public class SecurityConfiguration {
 		.hasRole("ADMIN")
 		.requestMatchers(HttpMethod.PATCH,"/appointments/complete")
 		.hasRole("DOCTOR")
+		//Customer api endpoints
+		.requestMatchers(HttpMethod.GET, "/api/customers/profile")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.PATCH, "/api/customers/profile")
+		.hasRole("CUSTOMER")
+		//KYC END POINTS
+		.requestMatchers(HttpMethod.POST, "/api/kyc/uploads")
+		.hasAnyRole("CUSTOMER")
+		.requestMatchers(HttpMethod.PATCH,"/api/kyc/**")
+		.hasAnyRole("EMPLOYEE","MANAGER")
+		//Customer api endpoints end
+		//Employee api endpoints
+		.requestMatchers(HttpMethod.GET, "/api/employees/profile")
+		.hasAnyRole("EMPLOYEE","MANAGER")
+		.requestMatchers(HttpMethod.PATCH, "/api/employees/profile")
+		.hasAnyRole("EMPLOYEE","MANAGER")
+		.requestMatchers(HttpMethod.GET, "/api/employees")
+		.hasRole("MANAGER")
+		.requestMatchers(HttpMethod.GET, "/api/employees/*")
+		.hasRole("MANAGER")
+		.requestMatchers(HttpMethod.PATCH, "/api/employees/*/assignment")
+		.hasRole("MANAGER")
+		//Employee api endpoints end
 		.anyRequest().authenticated()
 		);
 		//add custom jwt verification filter before - UsernamePasswordAuthFilter

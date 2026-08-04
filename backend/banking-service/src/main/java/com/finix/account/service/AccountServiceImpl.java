@@ -44,23 +44,23 @@ public class AccountServiceImpl implements AccountService {
     
 
     @Override
-    public AccountResponse createAccount(AccountType accType) {
+    public AccountResponse createAccount(AccountType accType , Customer customer) {
     	
-    	Authentication authentication =
-    	        SecurityContextHolder.getContext().getAuthentication();
+//    	Authentication authentication =
+//    	        SecurityContextHolder.getContext().getAuthentication();
 
 //    	CustomUserDetailsImpl user =
 //    	        (CustomUserDetailsImpl) authentication.getPrincipal();
     	
-    	JwtDTO jwt =
-        		(JwtDTO) authentication.getPrincipal();
+//    	JwtDTO jwt =
+//        		(JwtDTO) authentication.getPrincipal();
 
-    	Long userId = jwt.getUserId();
+//    	Long userId = jwt.getUserId();
     	
         // Check whether customer exists
-        Customer customer = customerRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("Customer not found"));
+//        Customer customer = customerRepository.findById(userId)
+//                .orElseThrow(() ->
+//                        new RuntimeException("Customer not found"));
         KycDocuments kycAccount=kycDocumentRepository.findByCustomer(customer);
         if(kycAccount==null) {
         	return null;
@@ -79,7 +79,7 @@ public class AccountServiceImpl implements AccountService {
         account.setIfscCode(generateIfscCode());
 
         // Default status
-        account.setStatus(AccountStatus.ACTIVE);
+        account.setStatus(AccountStatus.CLOSED);
 
         // Save account
         Account savedAccount = accountRepository.save(account);
