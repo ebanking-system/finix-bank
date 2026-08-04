@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 import com.finix.account.entity.AccountType;
 import com.finix.auth.entity.Role;
+import com.finix.employee.entity.Department;
+import com.finix.employee.entity.Designation;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,4 +28,6 @@ public class RegistrationDto {
 	 private String address;
 	 private String aadharNum;	
 	 private String panNum;
+	 private Department department;
+	 private Designation designation;
 }

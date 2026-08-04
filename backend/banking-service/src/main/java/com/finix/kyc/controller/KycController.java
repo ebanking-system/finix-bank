@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.finix.auth.dto.ApiResponse;
 import com.finix.kyc.dto.KycDocumentDto;
 import com.finix.kyc.dto.KycDocumentDto2;
 import com.finix.kyc.dto.StatusDto;
@@ -18,7 +19,7 @@ import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/kyc")
+@RequestMapping("/api/kyc")
 @RequiredArgsConstructor
 public class KycController {
 
@@ -31,8 +32,13 @@ public class KycController {
     }
     
     @PatchMapping("/{id}")
-    public ResponseEntity<?> updateStatus(@PathVariable Long  id , @RequestBody StatusDto statusDto) {
-    	 return ResponseEntity.ok(
-    			 kycService.updateStatus(id,statusDto));
+    public ResponseEntity<ApiResponse> updateStatus(@PathVariable Long  id , @RequestBody StatusDto statusDto) {
+    	 
+    	ApiResponse resp=kycService.updateStatus(id,statusDto);
+    	if(resp.getStatus().equals("success")) {
+    		return ResponseEntity.ok(resp);    		
+    	}else {
+    		return ResponseEntity.badRequest().body(resp);
+    	}
     }
 }

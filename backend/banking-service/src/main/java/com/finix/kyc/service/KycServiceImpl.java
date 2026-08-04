@@ -13,8 +13,12 @@ import com.finix.account.repository.AccountRepository;
 import com.finix.account.service.AccountServiceImpl;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
+import com.finix.auth.entity.Role;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
+import com.finix.employee.entity.Designation;
+import com.finix.employee.entity.Employee;
+import com.finix.employee.repository.EmployeeRepository;
 import com.finix.kyc.dto.KycDocumentDto2;
 import com.finix.kyc.dto.StatusDto;
 import com.finix.kyc.entity.KycDocuments;
@@ -30,13 +34,14 @@ import lombok.RequiredArgsConstructor;
 public class KycServiceImpl implements KycService{
 
     private final AccountRepository accountRepository;
-	public final CustomerRepository customerRepository;
-	public final KycDocumentRepository kycDocumentRepository;
-	public final AccountServiceImpl accountServiceImpl;
+    private final CustomerRepository customerRepository;
+	private final KycDocumentRepository kycDocumentRepository;
+	private final AccountServiceImpl accountServiceImpl;
+	private final EmployeeRepository employeeRepository;
 
     
 	@Override
-	public ResponseEntity<?> updateKyc(KycDocumentDto2 request) {
+	public ResponseEntity<ApiResponse> updateKyc(KycDocumentDto2 request) {
 		
 
 	    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -67,11 +72,23 @@ public class KycServiceImpl implements KycService{
 
 	    kycDocumentRepository.save(kyc);
 
-	    return ResponseEntity.ok("KYC Sent For Approval.");
+	    return ResponseEntity.ok(new ApiResponse("success", "KYC Sent For Approval."));
 	}
 	@Override
 	public ApiResponse updateStatus(Long id , StatusDto status) {
 		// TODO Auto-generated method stub
+		Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwtDto=(JwtDTO) authentication.getPrincipal();
+		System.out.print("Role : "+jwtDto.getRoleName());
+		if(jwtDto.getRoleName().equals(Role.CUSTOMER)) {
+			
+			return new ApiResponse("failure","ACCESS DENIED"); 
+		}
+		Employee emp=employeeRepository.findById(jwtDto.getUserId()).orElseThrow();
+		System.out.print(emp);
+		if(!emp.getDesignation().equals(Designation.KYC_OFFICER)) {
+			return new ApiResponse("failure","ACCESS DENIED"); 
+		}
 		if(status.getStatus()==Status.APPROVED) {
 			KycDocuments kycDocumentEntity=kycDocumentRepository.findById(id).orElseThrow();
 			kycDocumentEntity.setStatus(status.getStatus());

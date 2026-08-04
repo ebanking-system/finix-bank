@@ -35,29 +35,29 @@ public class EmployeeServiceImpl implements EmployeeService {
 	private final ModelMapper mapper;
 	private final PasswordEncoder encoder;
 
-	@Override
-	public ApiResponse registerEmployee(EmployeeRegistrationDto request) {
-
-		if (userRepository.existsByEmail(request.getEmail())) {
-			return new ApiResponse("Failure", "Account Already Exist");
-		}
-
-		try {
-			User user = mapper.map(request, User.class);
-			user.setRole(Role.EMPLOYEE);
-			user.setPasswordHash(encoder.encode(request.getPasswordHash()));
-			userRepository.save(user);
-
-			Employee employee = mapper.map(request, Employee.class);
-			employee.setUser(user);
-			employeeRepository.save(employee);
-
-		} catch (Exception ex) {
-			return new ApiResponse("Failure", ex.getMessage());
-		}
-
-		return new ApiResponse("Success", "Employee Created Successfully");
-	}
+//	@Override
+//	public ApiResponse registerEmployee(EmployeeRegistrationDto request) {
+//
+//		if (userRepository.existsByEmail(request.getEmail())) {
+//			return new ApiResponse("Failure", "Account Already Exist");
+//		}
+//
+//		try {
+//			User user = mapper.map(request, User.class);
+//			user.setRole(Role.EMPLOYEE);
+//			user.setPasswordHash(encoder.encode(request.getPasswordHash()));
+//			userRepository.save(user);
+//
+//			Employee employee = mapper.map(request, Employee.class);
+//			employee.setUser(user);
+//			employeeRepository.save(employee);
+//
+//		} catch (Exception ex) {
+//			return new ApiResponse("Failure", ex.getMessage());
+//		}
+//
+//		return new ApiResponse("Success", "Employee Created Successfully");
+//	}
 
 	@Override
 	public ApiResponse getMyProfile() {
