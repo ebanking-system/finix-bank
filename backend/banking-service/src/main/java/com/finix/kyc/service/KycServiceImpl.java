@@ -6,6 +6,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
 import com.finix.customer.entity.Customer;
 import com.finix.customer.repository.CustomerRepository;
@@ -56,5 +57,12 @@ public class KycServiceImpl implements KycService{
 	    kycDocumentRepository.save(kyc);
 
 	    return ResponseEntity.ok("KYC Sent For Approval.");
+	}
+	@Override
+	public ApiResponse updateStatus(Long id) {
+		// TODO Auto-generated method stub
+		KycDocuments kycDocumentEntity=kycDocumentRepository.findById(id).orElseThrow();
+		kycDocumentEntity.setStatus(Status.APPROVED);
+		return new ApiResponse("success","status update to APPROVED");
 	}
 }
