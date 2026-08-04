@@ -1,5 +1,9 @@
 package com.finix.kyc.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.core.Authentication;
@@ -24,7 +28,9 @@ import com.finix.customer.repository.CustomerRepository;
 import com.finix.employee.entity.Designation;
 import com.finix.employee.entity.Employee;
 import com.finix.employee.repository.EmployeeRepository;
+import com.finix.kyc.dto.KycDocumentDto;
 import com.finix.kyc.dto.KycDocumentDto2;
+import com.finix.kyc.dto.KycDocumentDto3;
 import com.finix.kyc.dto.StatusDto;
 import com.finix.kyc.entity.KycDocuments;
 import com.finix.kyc.entity.Status;
@@ -44,6 +50,7 @@ public class KycServiceImpl implements KycService{
 	private final AccountServiceImpl accountServiceImpl;
 	private final EmployeeRepository employeeRepository;
 	private final FileStorageUtil fileStorageUtil;
+	private final ModelMapper mapper;
 
     
 	@Override
@@ -168,5 +175,26 @@ public class KycServiceImpl implements KycService{
 	                    "KYC uploaded successfully."
 	            )
 	    );
+	}
+	@Override
+	public ResponseEntity<?> getKycByStatus(Status status) {
+
+	    List<KycDocuments> kycDocumentEntity = kycDocumentRepository.findByStatus(status);
+
+	    List<KycDocumentDto3> response = new ArrayList<>();
+
+	    kycDocumentEntity.forEach(kyc -> {
+
+	        KycDocumentDto3 dto = mapper.map(kyc, KycDocumentDto3.class);
+
+	        // Set customerId manually
+	        if (kyc.getCustomer() != null) {
+	            dto.setCustomerId(kyc.getCustomer().getCustomerId());
+	        }
+
+	        response.add(dto);
+	    });
+
+	    return ResponseEntity.ok(response);
 	}
 }
