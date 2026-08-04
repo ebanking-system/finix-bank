@@ -8,6 +8,8 @@ import com.finix.common.exception.AccessDeniedException;
 import com.finix.employee.entity.Department;
 import com.finix.employee.entity.Designation;
 import com.finix.employee.entity.Employee;
+import com.finix.employee.repository.EmployeeRepository;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthorizationServiceImpl
         implements AuthorizationService {
 
-//    private final EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
     @Override
     public void authorize(Department department,
@@ -34,16 +36,16 @@ public class AuthorizationServiceImpl
             return;
         }
 
-//        Employee employee = employeeRepository
-//                .findById(jwt.getUserId())
-//                .orElseThrow(() ->
-//                        new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository
+                .findById(jwt.getUserId())
+                .orElseThrow(() ->
+                        new RuntimeException("Employee not found"));
 
-//        if (employee.getDepartment() != department ||
-//            employee.getDesignation() != designation) {
-//
-//            throw new AccessDeniedException(
-//                    "You are not authorized to perform this operation.");
-//        }
+        if (employee.getDepartment() != department ||
+            employee.getDesignation() != designation) {
+
+            throw new AccessDeniedException(
+                    "You are not authorized to perform this operation.");
+        }
     }
 }

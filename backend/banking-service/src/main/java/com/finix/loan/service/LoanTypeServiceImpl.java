@@ -1,17 +1,27 @@
 package com.finix.loan.service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
+import com.finix.employee.entity.Department;
+import com.finix.employee.entity.Designation;
 import com.finix.loan.dto.LoanTypeRequestDto;
 import com.finix.loan.dto.LoanTypeResponseDto;
 import com.finix.loan.entity.LoanType;
+import com.finix.loan.repository.LoanRepository;
 import com.finix.loan.repository.LoanTypeRepository;
 
 import org.springframework.security.core.Authentication;
@@ -25,13 +35,20 @@ import lombok.RequiredArgsConstructor;
 public class LoanTypeServiceImpl implements LoanTypeService {
 
     private final LoanTypeRepository loanTypeRepository;
+    
+    private final LoanRepository loanRepository;
+    
 
     private final ModelMapper mapper;
+    
+    private final AuthorizationServiceImpl authorizationServiceImpl;
 
     @Override
     public ResponseEntity<?> createLoanType(LoanTypeRequestDto request) {
 
-		
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
         // Duplicate Loan Name
         if (loanTypeRepository.existsByLoanName(request.getLoanName())) {
             return ResponseEntity.badRequest()
@@ -99,6 +116,10 @@ public class LoanTypeServiceImpl implements LoanTypeService {
             Long loanTypeId,
             LoanTypeRequestDto request) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
+    	
         LoanType loanType =
                 loanTypeRepository.findById(loanTypeId)
                         .orElseThrow(() ->
@@ -149,12 +170,16 @@ public class LoanTypeServiceImpl implements LoanTypeService {
     @Override
     public ResponseEntity<?> deleteLoanType(Long loanTypeId) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
+    	
         LoanType loanType = loanTypeRepository.findById(loanTypeId)
                 .orElseThrow(() ->
                         new RuntimeException("Loan type not found."));
 
         // Check if this loan type is already used
-        if (loanTypeRepository.existsByLoanType(loanType)) {
+        if (loanRepository.existsByLoanType(loanType)) {
 
             return ResponseEntity.badRequest()
                     .body(new ApiResponse(
@@ -169,4 +194,6 @@ public class LoanTypeServiceImpl implements LoanTypeService {
                         "SUCCESS",
                         "Loan type deleted successfully."));
     }
+
+	
 }

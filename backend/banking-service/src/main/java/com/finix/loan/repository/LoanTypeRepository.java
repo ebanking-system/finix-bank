@@ -10,11 +10,10 @@ import com.finix.loan.entity.LoanType;
 @Repository
 public interface LoanTypeRepository extends JpaRepository<LoanType, Long>{
 	
-	ResponseEntity<?> createLoanType(LoanTypeRequestDto request);
 
 	boolean existsByLoanName(String loanName);
 
 	boolean existsByLoanNameAndLoanTypeIdNot(String loanName, Long loanTypeId);
 	
-	boolean existsByLoanType(LoanType loanType);
+	
 }

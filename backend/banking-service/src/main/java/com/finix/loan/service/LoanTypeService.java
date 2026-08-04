@@ -1,10 +1,11 @@
 package com.finix.loan.service;
 
+
 import org.springframework.http.ResponseEntity;
 
 import com.finix.loan.dto.LoanTypeRequestDto;
 
-public interface LoanTypeService {
+public interface LoanTypeService  {
 
 	ResponseEntity<?> createLoanType(LoanTypeRequestDto request);
 	

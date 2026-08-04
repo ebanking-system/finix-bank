@@ -83,7 +83,7 @@ public class SecurityConfiguration {
 		.requestMatchers(HttpMethod.POST,"/api/loans/repayments/*/pay")
 		.hasRole("CUSTOMER")
 		.requestMatchers(HttpMethod.GET,"/api/loans/defaulted")
-		.hasRole("MANAGER")
+		.hasAnyRole("MANAGER","EMPLOYEE")
 		.requestMatchers(HttpMethod.DELETE, "/api/loan-types/**")
 		.hasAnyRole("EMPLOYEE", "MANAGER")
 		//Loan api endpoints end

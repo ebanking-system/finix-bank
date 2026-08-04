@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finix.customer.repository.CustomerRepository;
+import com.finix.employee.entity.Department;
+import com.finix.employee.entity.Designation;
 import com.finix.kyc.entity.KycDocuments;
 import com.finix.kyc.entity.Status;
 import com.finix.kyc.repository.KycDocumentRepository;
@@ -69,6 +71,8 @@ public class LoanServiceImpl implements LoanService {
 	private final AccountRepository accountRepository;
 	
 	private final KycDocumentRepository kycDocumentRepository;
+	
+	private final AuthorizationServiceImpl authorizationServiceImpl;
 
 
 	// for customer to apply loan
@@ -210,6 +214,9 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> approveLoan(Long loanId) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
 		// Get logged-in employee
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -243,6 +250,9 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> rejectLoan(Long loanId, RejectLoanRequestDto request) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
 		// Get logged-in employee
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -272,6 +282,10 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> disburseLoan(Long loanId) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
+    	
 		// Logged-in employee
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -628,9 +642,12 @@ public class LoanServiceImpl implements LoanService {
                         "EMI paid successfully."));
 	}
 
-    //manager will get all defaulted loans
     @Override
     public ResponseEntity<?> getDefaultedLoans() {
+
+    	authorizationServiceImpl.authorize(
+                Department.LOANS,
+                Designation.LOAN_OFFICER);
 
         List<Loan> loans =
                 loanRepository.findByStatus(LoanStatus.DEFAULTED);
