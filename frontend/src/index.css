@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Primary Brand Theme: Deep Navy & Indigo */
+  --color-navy-950: #070D1B;
+  --color-navy-900: #0F172A;
+  --color-navy-800: #1E293B;
+  --color-navy-700: #334155;
+  --color-navy-600: #475569;
+  --color-navy-500: #64748B;
+  --color-navy-200: #E2E8F0;
+  --color-navy-100: #F1F5F9;
+  --color-navy-50:  #F8FAFC;
+
+  /* Accent Brand Theme: Vibrant Coral/Red */
+  --color-coral-600: #DC2626;
+  --color-coral-500: #F43F5E;
+  --color-coral-400: #FB7185;
+  --color-coral-100: #FFE4E6;
+  --color-coral-50:  #FFF1F2;
+}
+
+@layer base {
+  html, body {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+  }
+}
+
+/* Glassmorphism & custom utility classes */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.hero-gradient {
+  background: radial-gradient(135% 100% at 50% 0%, #0F172A 0%, #1E293B 60%, #090D16 100%);
+}
+
+.hero-glow {
+  background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(244, 63, 94, 0.15), transparent 40%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
