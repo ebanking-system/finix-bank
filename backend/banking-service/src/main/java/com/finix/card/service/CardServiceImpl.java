@@ -2,6 +2,8 @@ package com.finix.card.service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -15,9 +17,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finix.account.entity.Account;
+import com.finix.account.entity.AccountType;
 import com.finix.account.repository.AccountRepository;
+import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
 import com.finix.card.dto.CardRequestDTO;
+import com.finix.card.dto.CardRequestDTO_GetCard;
+import com.finix.card.dto.CardRequestDTO_PinChange;
+import com.finix.card.dto.CardResponseDTO_PinChange;
+import com.finix.card.entity.CardType;
 import com.finix.card.entity.Cards;
 import com.finix.card.entity.Status;
 import com.finix.common.exception.ResourceNotFoundException;
@@ -40,67 +48,61 @@ public class CardServiceImpl implements CardService {
 	@Override
 	public ResponseEntity<?> addCard(CardRequestDTO DTO) {
 
-	    Authentication authentication =
-	            SecurityContextHolder.getContext().getAuthentication();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-	    JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
 
-	    Long customerId = jwt.getUserId();
-	    
-	    System.out.println("Customer Id : "+customerId);
-	    Customer customer = customerRepository.findById(customerId)
-	            .orElseThrow(() -> 
-	                new ResourceNotFoundException("Customer not found"));
+		Long customerId = jwt.getUserId();
 
+		System.out.println("Customer Id : " + customerId);
+		Customer customer = customerRepository.findById(customerId)
+				.orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-	    Account account = accountRepository.findByAccountTypeAndCustomer(DTO.getAccountType(),customer);
-	            
+		Account account = accountRepository.findByAccountTypeAndCustomer(DTO.getAccountType(), customer);
 
-	    if (!account.getCustomer().getCustomerId().equals(customerId)) {
-	        throw new AccessDeniedException(
-	                "You cannot issue a card for another customer's account.");
-	    }
+		if (cardRepository.existsByAccountAndCardType(account, DTO.getCardType())) {
 
+			return ResponseEntity.badRequest()
+					.body(new ApiResponse("Failed", "Card with given Account is Already in use"));
+		}
 
-	    // DTO -> Entity
-	    Cards card = mapper.map(DTO, Cards.class);
+		if (!account.getCustomer().getCustomerId().equals(customerId)) {
+			throw new AccessDeniedException("You cannot issue a card for another customer's account.");
+		}
 
+		// DTO -> Entity
+		Cards card = mapper.map(DTO, Cards.class);
 
-	    card.setAccount(account);
+		card.setAccount(account);
 
+		String holderName = Stream.of(customer.getFirstName(), customer.getMiddleName(), customer.getLastName())
+				.filter(name -> name != null && !name.isBlank()).collect(Collectors.joining(" "));
 
-	    String holderName = Stream.of(
-	                customer.getFirstName(),
-	                customer.getMiddleName(),
-	                customer.getLastName())
-	            .filter(name -> name != null && !name.isBlank())
-	            .collect(Collectors.joining(" "));
+		card.setCardHolderName(holderName);
 
+		card.setCardNum(generateUniqueCardNumber());
 
-	    card.setCardHolderName(holderName);
+		card.setCvv(generateCVV());
 
-	    card.setCardNum(generateUniqueCardNumber());
+		card.setIssueDate(LocalDateTime.now());
 
-	    card.setCvv(generateCVV());
+		card.setExpiryDate(LocalDateTime.now().plusYears(5));
 
-	    card.setIssueDate(LocalDateTime.now());
+		card.setStatus(Status.ACTIVE);
+		
+		card.setPin(generatePin());
 
-	    card.setExpiryDate(LocalDateTime.now().plusYears(5));
+		Cards savedCard = cardRepository.save(card);
 
-	    card.setStatus(Status.ACTIVE);
+		// Entity -> Response DTO
+		CardRequestDTO response = mapper.map(savedCard, CardRequestDTO.class);
 
+		return ResponseEntity.ok(response);
+	}
 
-	    Cards savedCard = cardRepository.save(card);
-
-
-	    // Entity -> Response DTO
-	    CardRequestDTO response =
-	            mapper.map(savedCard, CardRequestDTO.class);
-
-
-	    return ResponseEntity
-	            .status(HttpStatus.CREATED)
-	            .body(response);
+	private String generatePin() {
+		int cvv = 100000 + random.nextInt(900000);
+		return String.valueOf(cvv);
 	}
 
 	private String generateCVV() {
@@ -130,5 +132,86 @@ public class CardServiceImpl implements CardService {
 			cardNumber.append(random.nextInt(10));
 		}
 		return cardNumber.toString();
+	}
+
+	@Override
+	public ResponseEntity<?> getCard(AccountType accountType) {
+
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+
+		Long customer_id = jwt.getUserId();
+
+		Customer customer = customerRepository.findById(customer_id)
+				.orElseThrow(() -> new ResourceNotFoundException("Customer Not Found"));
+
+		Account account = accountRepository.findByCustomerAndAccountType(customer, accountType);
+
+		List<Cards> card = cardRepository.findByAccount(account);
+
+		List<CardRequestDTO_GetCard> response = new ArrayList<>();
+
+		card.stream().forEach(c -> response.add(mapper.map(c, CardRequestDTO_GetCard.class)));
+
+		return ResponseEntity.ok(response);
+	}
+
+	@Override
+	public ResponseEntity<?> deactivateCard(Status status, AccountType accountType, CardType cardType) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+
+		Long customer_id = jwt.getUserId();
+		Customer customer = customerRepository.findById(customer_id)
+				.orElseThrow(() -> new ResourceNotFoundException("Customer Not Found"));
+
+		Account account = accountRepository.findByCustomerAndAccountType(customer, accountType);
+		
+		Cards card = cardRepository.findByAccountAndAccount_AccountType(account, accountType);
+		
+		if(card.getStatus().equals(status.ACTIVE)) {
+			card.setStatus(status.BLOCKED);
+			cardRepository.save(card);
+			return ResponseEntity.ok("Status Blocked Successfully");
+		}
+		if(card.getStatus().equals(status.BLOCKED)) {
+			card.setStatus(status.ACTIVE);
+			cardRepository.save(card);
+			return ResponseEntity.ok("Status Unblocked Successfully");
+			
+		}
+		else {
+			return ResponseEntity.ok("Something Wrong Happened");
+			
+		}
+	}
+
+	@Override
+	public ResponseEntity<?> updatePin(CardRequestDTO_PinChange request) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+		
+		Long customer_id = jwt.getUserId();
+		
+		Customer customer = customerRepository.findById(customer_id)
+				.orElseThrow(() -> new ResourceNotFoundException("Customer Not Found"));
+
+		Account account = accountRepository.findByCustomerAndAccountType(customer, request.accountType);
+		
+		Cards card = cardRepository.findByAccountAndCardType(account, request.cardType);
+		
+		if(card.getPin().equals(request.getPin())) {
+			return ResponseEntity.ok("Pin Already Used");
+		}
+		
+		card.setPin(request.getPin());
+		Cards savedCard = cardRepository.save(card);
+		
+		CardResponseDTO_PinChange response = mapper.map(savedCard, CardResponseDTO_PinChange.class);
+		
+		return ResponseEntity.ok("Pin Changed Successfully");
 	}
 }
