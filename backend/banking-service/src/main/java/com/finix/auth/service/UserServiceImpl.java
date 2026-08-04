@@ -10,7 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.finix.account.service.AccountServiceImpl;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.AuthRequest;
 import com.finix.auth.dto.AuthResponse;
@@ -35,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserServiceImpl implements UserService {
 
+    private final AccountServiceImpl accountServiceImpl;
+
     private final KycDocumentRepository kycDocumentRepository;
 
     private final CustomerRepository customerRepository;
@@ -47,8 +49,6 @@ public class UserServiceImpl implements UserService {
 	private final PasswordEncoder encoder;
 	private final AuthenticationManager authenticationManager;
 	private final JwtUtils jwtUtils;
-
-
 	
 
 	@Override
@@ -110,6 +110,7 @@ public class UserServiceImpl implements UserService {
 			kycEntity.setSelfImage("myImage.png");
 			kycEntity.setSubmittedDate(LocalDateTime.now());
 			kycDocumentRepository.save(kycEntity);
+			accountServiceImpl.createAccount(registrationDto.getAccountType(),customer);
 			System.out.print("KYC Entity : "+kycEntity);
 		}catch(Exception ex) {
 			return new ApiResponse("Failure",ex.getMessage());

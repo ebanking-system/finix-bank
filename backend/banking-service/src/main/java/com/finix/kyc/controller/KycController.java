@@ -5,10 +5,13 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.finix.kyc.dto.KycDocumentDto;
 import com.finix.kyc.dto.KycDocumentDto2;
+import com.finix.kyc.dto.StatusDto;
+import com.finix.kyc.entity.Status;
 import com.finix.kyc.service.KycService;
 
 import jakarta.websocket.server.PathParam;
@@ -28,8 +31,8 @@ public class KycController {
     }
     
     @PatchMapping("/{id}")
-    public ResponseEntity<?> updateStatus(@PathVariable Long  id) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long  id , @RequestBody StatusDto statusDto) {
     	 return ResponseEntity.ok(
-    			 kycService.updateStatus(id));
+    			 kycService.updateStatus(id,statusDto));
     }
 }

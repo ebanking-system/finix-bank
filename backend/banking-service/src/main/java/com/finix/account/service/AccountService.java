@@ -8,10 +8,11 @@ import com.finix.account.dto.AccountResponse;
 import com.finix.account.dto.CreateAccountRequest;
 import com.finix.account.entity.AccountType;
 import com.finix.auth.dto.ApiResponse;
+import com.finix.customer.entity.Customer;
 
 public interface AccountService {
 
-    AccountResponse createAccount(AccountType accType);
+    AccountResponse createAccount(AccountType accType , Customer customer);
 
     ApiResponse getAccountById(Long accountId);
 

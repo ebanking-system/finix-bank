@@ -2,6 +2,7 @@ package com.finix.auth.dto;
 
 import java.time.LocalDate;
 
+import com.finix.account.entity.AccountType;
 import com.finix.auth.entity.Role;
 
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class RegistrationDto {
 	 private String email;
 	 private String passwordHash;
 	 private Role role;
+	 private AccountType accountType;
 	 private String firstName;
 	 private String middleName;
 	 private String lastName;
