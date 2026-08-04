@@ -1,11 +1,16 @@
 package com.finix.kyc.service;
 
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
+
+import com.finix.util.FileStorageUtil;
+import com.finix.kyc.dto.KycUploadRequest;
 import com.finix.account.entity.Account;
 import com.finix.account.entity.AccountStatus;
 import com.finix.account.entity.AccountType;
@@ -38,6 +43,7 @@ public class KycServiceImpl implements KycService{
 	private final KycDocumentRepository kycDocumentRepository;
 	private final AccountServiceImpl accountServiceImpl;
 	private final EmployeeRepository employeeRepository;
+	private final FileStorageUtil fileStorageUtil;
 
     
 	@Override
@@ -63,9 +69,9 @@ public class KycServiceImpl implements KycService{
 	        kyc.setPanNum(request.getPanNum());
 	    }
 
-	    if (request.getSelfImage() != null && !request.getSelfImage().isBlank()) {
-	        kyc.setSelfImage(request.getSelfImage());
-	    }
+//	    if (request.getSelfImage() != null && !request.getSelfImage().isBlank()) {
+//	        kyc.selfieFile(request.getSelfImage());
+//	    }
 
 	    // Since documents changed, KYC should be verified again
 	    kyc.setStatus(Status.PENDING);
@@ -99,5 +105,68 @@ public class KycServiceImpl implements KycService{
 			return new ApiResponse("success","status update to APPROVED");			
 		}
 		return new ApiResponse("success","status update to REJECTED");
+	}
+	
+	@Override
+	public ResponseEntity<ApiResponse> uploadKyc(KycUploadRequest request) {
+
+	    // 1. Get logged-in customer
+	    Authentication authentication =
+	            SecurityContextHolder.getContext().getAuthentication();
+
+	    JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+
+	    Long customerId = jwt.getUserId();
+
+	    // 2. Find customer
+	    Customer customer = customerRepository.findById(customerId)
+	            .orElseThrow(() ->
+	                    new RuntimeException("Customer not found"));
+
+	    // 3. Find KYC record
+	    KycDocuments kyc = kycDocumentRepository.findByCustomer(customer);
+
+	    if (kyc == null) {
+	        kyc = new KycDocuments();
+	        kyc.setCustomer(customer);
+	    }
+
+	    // 4. Update text fields
+//	    kyc.setAadharNum(request.getAadharNum());
+//	    kyc.setPanNum(request.getPanNum());
+
+	    // 5. Save uploaded files
+
+	    String aadharPath =
+	            fileStorageUtil.saveFile(request.getAadharFile(), customerId);
+
+	    String panPath =
+	            fileStorageUtil.saveFile(request.getPanFile(), customerId);
+
+	    String selfiePath =
+	            fileStorageUtil.saveFile(request.getSelfie(), customerId);
+
+	    // 6. Store file paths in database
+
+	    kyc.setAadharFile(aadharPath);
+
+	    kyc.setPanFile(panPath);
+
+	    kyc.setSelfieFile(selfiePath);
+
+	    // 7. KYC must be verified again
+
+	    kyc.setStatus(Status.PENDING);
+
+	    // 8. Save changes
+
+	    kycDocumentRepository.save(kyc);
+
+	    return ResponseEntity.ok(
+	            new ApiResponse(
+	                    "success",
+	                    "KYC uploaded successfully."
+	            )
+	    );
 	}
 }

@@ -49,8 +49,17 @@ public class KycDocuments {
 	@Column(name="pan_num", nullable = false, unique= true)
 	private String panNum;
 	
-	@Column(name="self_image", nullable = false)
-	private String selfImage;
+	// Stores Aadhaar card file path
+	@Column(name = "aadhar_file", length = 255)
+	private String aadharFile;
+
+	// Stores PAN card file path
+	@Column(name = "pan_file", length = 255)
+	private String panFile;
+
+	// Stores customer's selfie file path
+	@Column(name = "selfie_file", length = 255)
+	private String selfieFile;
 	
 	@Enumerated(EnumType.STRING)
 	private Status status;

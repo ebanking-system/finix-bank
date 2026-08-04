@@ -119,7 +119,6 @@ public class UserServiceImpl implements UserService {
 				KycDocuments kycEntity=mapper.map(registrationDto,KycDocuments.class);
 				kycEntity.setCustomer(customer);
 				kycEntity.setStatus(Status.PENDING);
-				kycEntity.setSelfImage("myImage.png");
 				kycEntity.setSubmittedDate(LocalDateTime.now());
 				kycDocumentRepository.save(kycEntity);
 				accountServiceImpl.createAccount(registrationDto.getAccountType(),customer);
