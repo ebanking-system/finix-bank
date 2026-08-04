@@ -54,7 +54,7 @@ public class SecurityConfiguration {
 		 */
 		http.authorizeHttpRequests(request ->
 		request.requestMatchers("/v3/api-docs/**","/swagger-ui/**",
-				"/users/signin","/users/signup","/employee/signup","/users/password-encryption","/api/beneficiary")	
+				"/users/signin","/users/signup","/api/employees/signup","/users/password-encryption","/api/beneficiary")	
 		.permitAll()
 		.requestMatchers(HttpMethod.OPTIONS).permitAll()
 		.requestMatchers(HttpMethod.GET, "/api/beneficiary").permitAll()
@@ -86,6 +86,18 @@ public class SecurityConfiguration {
 		.requestMatchers(HttpMethod.PATCH, "/api/customers/profile")
 		.hasRole("CUSTOMER")
 		//Customer api endpoints end
+		//Employee api endpoints
+		.requestMatchers(HttpMethod.GET, "/api/employees/profile")
+		.hasAnyRole("EMPLOYEE","MANAGER")
+		.requestMatchers(HttpMethod.PATCH, "/api/employees/profile")
+		.hasAnyRole("EMPLOYEE","MANAGER")
+		.requestMatchers(HttpMethod.GET, "/api/employees")
+		.hasRole("MANAGER")
+		.requestMatchers(HttpMethod.GET, "/api/employees/*")
+		.hasRole("MANAGER")
+		.requestMatchers(HttpMethod.PATCH, "/api/employees/*/assignment")
+		.hasRole("MANAGER")
+		//Employee api endpoints end
 		.anyRequest().authenticated()
 		);
 		//add custom jwt verification filter before - UsernamePasswordAuthFilter
