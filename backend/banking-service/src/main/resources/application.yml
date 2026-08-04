@@ -42,7 +42,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/bank
     username: root
-    password: "password"
+    password: "Pass@123"
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -51,6 +51,12 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: update
+
+  rabbitmq:
+   host: localhost
+   port: 5672
+   username: guest
+   password: guest		
 
 jwt:
   exp:
@@ -85,3 +91,6 @@ logging:
 
 file:
   upload-dir: uploads/kyc
+
+notification:
+  queue: notification.queue

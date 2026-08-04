@@ -25,6 +25,9 @@ import com.finix.loan.dto.RejectLoanRequestDto;
 import com.finix.loan.repository.LoanRepaymentRepository;
 import com.finix.loan.repository.LoanRepository;
 import com.finix.loan.repository.LoanTypeRepository;
+import com.finix.notification.dto.NotificationEvent;
+import com.finix.notification.producer.NotificationProducer;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -73,6 +76,8 @@ public class LoanServiceImpl implements LoanService {
 	private final KycDocumentRepository kycDocumentRepository;
 	
 	private final AuthorizationServiceImpl authorizationServiceImpl;
+	
+	private final NotificationProducer notificationProducer;
 
 
 	// for customer to apply loan
@@ -176,6 +181,8 @@ public class LoanServiceImpl implements LoanService {
 
 		// Save
 		Loan savedLoan = loanRepository.save(loan);
+		
+
 
 		return ResponseEntity.ok(mapLoanResponse(savedLoan));
 	}
@@ -242,6 +249,19 @@ public class LoanServiceImpl implements LoanService {
 
 		// Save
 		Loan savedLoan = loanRepository.save(loan);
+		
+		NotificationEvent event = NotificationEvent.builder()
+		        .customerId(loan.getCustomer().getCustomerId())
+		        .eventType("LOAN_APPROVED")
+		        .title("Loan Approved")
+		        .message("Congratulations! Your "
+		                + loan.getLoanType().getLoanName()
+		                + " has been approved successfully.")
+		        .email(loan.getCustomer().getUser().getEmail())
+		        .channels(List.of("EMAIL", "IN_APP"))
+		        .build();
+
+		notificationProducer.send(event);
 
 		return ResponseEntity.ok(mapLoanResponse(savedLoan));
 	}
