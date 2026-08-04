@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -78,10 +79,18 @@ public class SecurityConfiguration {
 		.requestMatchers(HttpMethod.PUT, "/api/loans/*/reject")
 		.hasRole("EMPLOYEE")
 		.requestMatchers(HttpMethod.PUT, "/api/loans/*/disburse")
-		.hasRole("EMPLOYEE")
+		.hasAnyRole("EMPLOYEE","MANAGER")
 		.requestMatchers(HttpMethod.POST,"/api/loans/repayments/*/pay")
 		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.GET,"/api/loans/defaulted")
+		.hasAnyRole("MANAGER","EMPLOYEE")
+		.requestMatchers(HttpMethod.DELETE, "/api/loan-types/**")
+		.hasAnyRole("EMPLOYEE", "MANAGER")
 		//Loan api endpoints end
+		.requestMatchers(HttpMethod.GET,"/appointments","/patients")
+		.hasRole("ADMIN")
+		.requestMatchers(HttpMethod.PATCH,"/appointments/complete")
+		.hasRole("DOCTOR")
 		//Customer api endpoints
 		.requestMatchers(HttpMethod.GET, "/api/customers/profile")
 		.hasRole("CUSTOMER")

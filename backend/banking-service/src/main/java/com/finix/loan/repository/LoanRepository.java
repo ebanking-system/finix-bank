@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import com.finix.customer.entity.Customer;
 import com.finix.loan.entity.Loan;
 import com.finix.loan.entity.LoanStatus;
+import com.finix.loan.entity.LoanType;
 
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
@@ -16,4 +17,10 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 	
 	//This is for Employee Role whose designation is LoanOfficer and department Lone
 	List<Loan> findByStatus(LoanStatus status);
+	
+	boolean existsByCustomerAndStatusIn(Customer customer, List<LoanStatus> statuses);
+
+	boolean existsByCustomerAndStatus(Customer customer, LoanStatus defaulted);
+	
+	boolean existsByLoanType(LoanType loanType);
 }

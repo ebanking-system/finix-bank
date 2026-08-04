@@ -11,6 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.finix.customer.repository.CustomerRepository;
+import com.finix.employee.entity.Department;
+import com.finix.employee.entity.Designation;
+import com.finix.kyc.entity.KycDocuments;
+import com.finix.kyc.entity.Status;
+import com.finix.kyc.repository.KycDocumentRepository;
+import com.finix.loan.dto.DefaultedLoanResponseDto;
 import com.finix.loan.dto.LoanRepaymentResponseDto;
 import com.finix.loan.dto.LoanRequestDto;
 import com.finix.loan.dto.LoanResponseDto;
@@ -63,6 +69,10 @@ public class LoanServiceImpl implements LoanService {
 	private final EmiCalculatorService emiCalculatorService;
 
 	private final AccountRepository accountRepository;
+	
+	private final KycDocumentRepository kycDocumentRepository;
+	
+	private final AuthorizationServiceImpl authorizationServiceImpl;
 
 
 	// for customer to apply loan
@@ -78,9 +88,86 @@ public class LoanServiceImpl implements LoanService {
 		Customer customer = customerRepository.findById(jwt.getUserId())
 				.orElseThrow(() -> new RuntimeException("Customer not found"));
 
+		KycDocuments kyc =
+		        kycDocumentRepository.findByCustomer(customer);
+
+		if (kyc == null) {
+
+		    return ResponseEntity.badRequest()
+		            .body(new ApiResponse(
+		                    "FAILED",
+		                    "Please complete KYC before applying for a loan."));
+		}
+		
+		if (kyc.getStatus() != Status.APPROVED) {
+
+		    return ResponseEntity.badRequest()
+		            .body(new ApiResponse(
+		                    "FAILED",
+		                    "Your KYC is not approved."));
+		}
+		
+		if (loanRepository.existsByCustomerAndStatus(customer, LoanStatus.DEFAULTED)) {
+
+		    return ResponseEntity.badRequest()
+		            .body(new ApiResponse(
+		                    "FAILED",
+		                    "You have defaulted on a previous loan. Please contact the bank."));
+		}
+		
+		List<LoanStatus> blockedStatuses = List.of(
+		        LoanStatus.UNDER_REVIEW,
+		        LoanStatus.APPROVED,
+		        LoanStatus.ACTIVE);
+
+		if (loanRepository.existsByCustomerAndStatusIn(customer, blockedStatuses)) {
+
+		    return ResponseEntity.badRequest()
+		            .body(new ApiResponse(
+		                    "FAILED",
+		                    "You already have a loan that is not yet closed."));
+		}
+		
+		Account savingsAccount =
+		        accountRepository.findByCustomerAndAccountType(
+		                customer,
+		                AccountType.SAVINGS);
+
+		if (savingsAccount == null) {
+
+		    return ResponseEntity.badRequest()
+		            .body(new ApiResponse(
+		                    "FAILED",
+		                    "Savings account not found."));
+		}
 		// Fetch loan type
 		LoanType loanType = loanTypeRepository.findById(request.getLoanTypeId())
 				.orElseThrow(() -> new RuntimeException("Loan type not found"));
+		
+		if (request.getAmount().compareTo(loanType.getMinAmount()) < 0 ||
+			    request.getAmount().compareTo(loanType.getMaxAmount()) > 0) {
+
+			    return ResponseEntity.badRequest()
+			            .body(new ApiResponse(
+			                    "FAILED",
+			                    "Loan amount must be between ₹" +
+			                    loanType.getMinAmount() +
+			                    " and ₹" +
+			                    loanType.getMaxAmount()));
+			}
+		
+		if (request.getTenureMonths() < loanType.getMinTenureMonths() ||
+			    request.getTenureMonths() > loanType.getMaxTenureMonths()) {
+
+			    return ResponseEntity.badRequest()
+			            .body(new ApiResponse(
+			                    "FAILED",
+			                    "Loan tenure must be between " +
+			                    loanType.getMinTenureMonths() +
+			                    " and " +
+			                    loanType.getMaxTenureMonths() +
+			                    " months."));
+			}
 
 		// Map DTO to Entity
 		Loan loan = Loan.builder().customer(customer).loanType(loanType).amount(request.getAmount())
@@ -127,6 +214,9 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> approveLoan(Long loanId) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
 		// Get logged-in employee
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -160,6 +250,9 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> rejectLoan(Long loanId, RejectLoanRequestDto request) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
 		// Get logged-in employee
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -189,6 +282,10 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> disburseLoan(Long loanId) {
 
+    	authorizationServiceImpl.authorize(
+    	        Department.LOANS,
+    	        Designation.LOAN_OFFICER);
+    	
 		// Logged-in employee
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -204,6 +301,12 @@ public class LoanServiceImpl implements LoanService {
 
 		// Find customer's savings account
 		Account account = accountRepository.findByCustomerAndAccountType(loan.getCustomer(), AccountType.SAVINGS);
+		
+		// Find Internal Bank Account
+		Account bankAccount = accountRepository
+		        .findByAccountNumber("000000000000")
+		        .orElseThrow(() ->
+		                new RuntimeException("Internal Bank Account not found"));
 
 		if (account == null) {
 			return ResponseEntity.badRequest()
@@ -214,16 +317,30 @@ public class LoanServiceImpl implements LoanService {
 		if (account.getStatus() != AccountStatus.ACTIVE) {
 			return ResponseEntity.badRequest().body(new ApiResponse("FAILED", "Customer account is not active."));
 		}
+		
+		// Internal account must be active
+		if (bankAccount.getStatus() != AccountStatus.ACTIVE) {
+		    return ResponseEntity.badRequest()
+		            .body(new ApiResponse(
+		                    "FAILED",
+		                    "Internal Bank Account is not active."));
+		}
+		// Debit Internal Bank Account
+		bankAccount.setBalance(
+		        bankAccount.getBalance().subtract(loan.getAmount()));
 
-		// Credit loan amount
-		account.setBalance(account.getBalance().add(loan.getAmount()));
+		// Credit Customer Account
+		account.setBalance(
+		        account.getBalance().add(loan.getAmount()));
 
+		// Save both accounts
+		accountRepository.save(bankAccount);
 		accountRepository.save(account);
 
 		// Create transaction
 		Transaction transaction = new Transaction();
 
-		transaction.setFromAccount(null);
+		transaction.setFromAccount(bankAccount);
 
 		transaction.setToAccount(account);
 
@@ -331,6 +448,11 @@ public class LoanServiceImpl implements LoanService {
                 customerRepository.findById(jwt.getUserId())
                         .orElseThrow(() ->
                                 new RuntimeException("Customer not found"));
+        
+        Account bankAccount = accountRepository
+                .findByAccountNumber("000000000000")
+                .orElseThrow(() ->
+                        new RuntimeException("Internal Bank Account not found"));
 
         // Find repayment
         LoanRepayment repayment =
@@ -340,27 +462,40 @@ public class LoanServiceImpl implements LoanService {
 
         Loan loan = repayment.getLoan();
         
-     // Customer must pay EMIs in sequence
-        List<LoanRepayment> pendingRepayments =
-                loanRepaymentRepository.findByLoanAndStatusOrderByEmiNumberAsc(
-                        loan,
-                        RepaymentStatus.PENDING);
+        List<LoanRepayment> repayments =
+                loanRepaymentRepository.findByLoanOrderByEmiNumberAsc(loan);
+        
+        LoanRepayment nextUnpaid = repayments.stream()
+                .filter(r -> r.getStatus() != RepaymentStatus.PAID)
+                .findFirst()
+                .orElse(null);
 
-        if (!pendingRepayments.isEmpty()) {
+        if (nextUnpaid != null &&
+            !nextUnpaid.getRepaymentId().equals(repayment.getRepaymentId())) {
 
-            LoanRepayment nextPendingEmi = pendingRepayments.get(0);
-
-            if (!nextPendingEmi.getRepaymentId()
-                    .equals(repayment.getRepaymentId())) {
-
-                return ResponseEntity.badRequest()
-                        .body(new ApiResponse(
-                                "FAILED",
-                                "Please pay EMI #" +
-                                nextPendingEmi.getEmiNumber() +
-                                " first."));
-            }
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "Please pay EMI #" +
+                            nextUnpaid.getEmiNumber() +
+                            " first."));
         }
+
+//        if (!pendingRepayments.isEmpty()) {
+//
+//            LoanRepayment nextPendingEmi = pendingRepayments.get(0);
+//
+//            if (!nextPendingEmi.getRepaymentId()
+//                    .equals(repayment.getRepaymentId())) {
+//
+//                return ResponseEntity.badRequest()
+//                        .body(new ApiResponse(
+//                                "FAILED",
+//                                "Please pay EMI #" +
+//                                nextPendingEmi.getEmiNumber() +
+//                                " first."));
+//            }
+//        }
 
         // Verify ownership
         if (!loan.getCustomer().getCustomerId()
@@ -381,13 +516,14 @@ public class LoanServiceImpl implements LoanService {
                             "EMI already paid."));
         }
 
-        // Loan should be active
-        if (loan.getStatus() != LoanStatus.ACTIVE) {
+     // Loan should be ACTIVE or DEFAULTED
+        if (loan.getStatus() != LoanStatus.ACTIVE &&
+            loan.getStatus() != LoanStatus.DEFAULTED) {
 
             return ResponseEntity.badRequest()
                     .body(new ApiResponse(
                             "FAILED",
-                            "Loan is not active."));
+                            "Loan cannot accept EMI payments."));
         }
 
         // Customer account
@@ -422,13 +558,27 @@ public class LoanServiceImpl implements LoanService {
                             "FAILED",
                             "Insufficient balance."));
         }
+        
+        if (bankAccount.getStatus() != AccountStatus.ACTIVE) {
 
-        // Debit account
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(
+                            "FAILED",
+                            "Internal Bank Account is not active."));
+        }
+        
+     // Debit Customer Account
         account.setBalance(
                 account.getBalance()
                         .subtract(repayment.getAmountDue()));
 
+        // Credit Internal Bank Account
+        bankAccount.setBalance(
+                bankAccount.getBalance()
+                        .add(repayment.getAmountDue()));
+
         accountRepository.save(account);
+        accountRepository.save(bankAccount);
 
         // Update repayment
         repayment.setAmountPaid(repayment.getAmountDue());
@@ -436,6 +586,18 @@ public class LoanServiceImpl implements LoanService {
         repayment.setStatus(RepaymentStatus.PAID);
 
         loanRepaymentRepository.save(repayment);
+        
+        //when all overdues are cleard then change the status to ACTIVE
+        long overdueCount =
+                loanRepaymentRepository.countByLoanAndStatus(
+                        loan,
+                        RepaymentStatus.OVERDUE);
+
+        if (loan.getStatus() == LoanStatus.DEFAULTED &&
+            overdueCount == 0) {
+
+            loan.setStatus(LoanStatus.ACTIVE);
+        }
 
         // Update loan remaining amount
         loan.setRemainingAmount(
@@ -456,7 +618,7 @@ public class LoanServiceImpl implements LoanService {
         Transaction transaction = new Transaction();
 
         transaction.setFromAccount(account);
-        transaction.setToAccount(null);
+        transaction.setToAccount(bankAccount);
 
         transaction.setAmount(repayment.getAmountDue());
 
@@ -479,5 +641,63 @@ public class LoanServiceImpl implements LoanService {
                         "SUCCESS",
                         "EMI paid successfully."));
 	}
+
+    @Override
+    public ResponseEntity<?> getDefaultedLoans() {
+
+    	authorizationServiceImpl.authorize(
+                Department.LOANS,
+                Designation.LOAN_OFFICER);
+
+        List<Loan> loans =
+                loanRepository.findByStatus(LoanStatus.DEFAULTED);
+
+        List<DefaultedLoanResponseDto> response =
+                loans.stream()
+                        .map(loan -> {
+
+                            DefaultedLoanResponseDto dto =
+                                    new DefaultedLoanResponseDto();
+
+                            dto.setLoanId(loan.getLoanId());
+
+                            dto.setCustomerId(
+                                    loan.getCustomer().getCustomerId());
+
+                            dto.setCustomerName(
+                                    loan.getCustomer().getFirstName() +
+                                    " " +
+                                    loan.getCustomer().getLastName());
+
+                            dto.setMobile(
+                                    loan.getCustomer().getMobile());
+
+                            dto.setLoanType(
+                                    loan.getLoanType().getLoanName());
+
+                            dto.setLoanAmount(
+                                    loan.getAmount());
+
+                            dto.setRemainingAmount(
+                                    loan.getRemainingAmount());
+
+                            dto.setStatus(
+                                    loan.getStatus());
+
+                            dto.setOverdueEmis(
+                                    (int) loanRepaymentRepository
+                                            .countByLoanAndStatus(
+                                                    loan,
+                                                    RepaymentStatus.OVERDUE));
+
+                            return dto;
+
+                        })
+                        .toList();
+
+        return ResponseEntity.ok(response);
+    }
+    
+    
 
 }

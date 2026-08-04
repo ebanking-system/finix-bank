@@ -82,4 +82,11 @@ public class LoanController {
         return loanService.payEmi(repaymentId, request);
     }
     
+    @GetMapping("/defaulted")
+    public ResponseEntity<?> getDefaultedLoans() {
+
+        return loanService.getDefaultedLoans();
+
+    }
+    
 }

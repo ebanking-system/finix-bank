@@ -28,6 +28,18 @@ public class LoanType {
 
     @Column(name = "interest_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal interestRate;
+    
+    @Column(name = "min_amount", precision = 19, scale = 2)
+    private BigDecimal minAmount;
+
+    @Column(name = "max_amount", precision = 19, scale = 2)
+    private BigDecimal maxAmount;
+    
+    @Column(name = "min_tenure_months")
+    private Integer minTenureMonths;
+
+    @Column(name = "max_tenure_months")
+    private Integer maxTenureMonths;
 
     @OneToMany(mappedBy = "loanType", fetch = FetchType.LAZY)
     private List<Loan> loans = new ArrayList<>();
