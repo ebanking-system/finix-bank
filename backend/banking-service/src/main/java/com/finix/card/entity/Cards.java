@@ -27,8 +27,8 @@ public class Cards {
     @Column(name = "card_id")
     private Long cardId;
     
-    @ManyToOne
-    @JoinColumn(name = "account_id")
+    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id",nullable = false)
     private Account account;
 
     @Column(name = "card_holder_name", nullable = false)
@@ -54,6 +54,9 @@ public class Cards {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private Status status;
+    
+    @Column(name = "pin", nullable = false, length = 6)
+    public String pin;
     
 	//this below method is for handling expiry date of card, commenting this because 
 	//writing this in the service layer is better approach
