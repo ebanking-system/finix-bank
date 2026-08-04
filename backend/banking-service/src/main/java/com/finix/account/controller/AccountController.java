@@ -27,18 +27,18 @@ public class AccountController {
     /**
      * Create New Bank Account
      */
-//    @PostMapping
-//    public ResponseEntity<?> createAccount(
-//            @Valid @RequestBody AccountType accType) {
-//
-//        AccountResponse response =
-//                accountService.createAccount(accType,);
-//        if(response==null) {
-//        	return new ResponseEntity<>("KYC NOT APPROVED YET",HttpStatus.NO_CONTENT);
-//        }
-//
-//        return new ResponseEntity<>(response, HttpStatus.CREATED);
-//    }
+    @PostMapping
+    public ResponseEntity<?> createAccount(
+            @Valid @RequestBody AccountType accType) {
+
+        AccountResponse response =
+                accountService.createAccount(accType);
+        if(response==null) {
+        	return new ResponseEntity<>("KYC NOT APPROVED YET",HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
     
     @GetMapping("/{accountId}")
     public ResponseEntity<ApiResponse> getAccountById(
