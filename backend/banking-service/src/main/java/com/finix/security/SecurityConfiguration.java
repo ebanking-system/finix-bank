@@ -55,7 +55,7 @@ public class SecurityConfiguration {
 		 */
 		http.authorizeHttpRequests(request ->
 		request.requestMatchers("/v3/api-docs/**","/swagger-ui/**",
-				"/users/signin","/users/signup","/api/employees/signup","/users/password-encryption","/api/beneficiary")	
+				"/api/auth/signin","/api/auth/signup","/api/employees/signup","/users/password-encryption","/api/beneficiary")	
 		.permitAll()
 		.requestMatchers(HttpMethod.OPTIONS).permitAll()
 		.requestMatchers(HttpMethod.GET, "/api/beneficiary").permitAll()

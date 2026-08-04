@@ -7,7 +7,7 @@ export const authService = {
    * @returns {Promise<{ id: string|number, userRole: string, jwt: string }>}
    */
   async signin(credentials) {
-    const response = await api.post('/users/signin', credentials);
+    const response = await api.post('/api/auth/signin', credentials);
     return response.data;
   },
 
@@ -22,7 +22,7 @@ export const authService = {
       ...rest,
       passwordHash: password, // Backend expects passwordHash key
     };
-    const response = await api.post('/users/signup', payload);
+    const response = await api.post('/api/auth/signup', payload);
     return response.data;
   },
 };

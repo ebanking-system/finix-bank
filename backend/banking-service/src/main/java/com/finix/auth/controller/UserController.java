@@ -16,7 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class UserController {
 	// depcy -constr based D.I

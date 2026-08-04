@@ -121,8 +121,8 @@ public class UserServiceImpl implements UserService {
 				kycEntity.setStatus(Status.PENDING);
 				kycEntity.setSubmittedDate(LocalDateTime.now());
 				kycDocumentRepository.save(kycEntity);
-				accountServiceImpl.createAccount(registrationDto.getAccountType(),customer);
 				System.out.print("KYC Entity : "+kycEntity);
+				accountServiceImpl.createAccount(registrationDto.getAccountType(),customer);
 			}else {
 				
 				Employee employee = mapper.map(registrationDto, Employee.class);

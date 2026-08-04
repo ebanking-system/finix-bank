@@ -82,8 +82,9 @@ public class AccountServiceImpl implements AccountService {
         account.setStatus(AccountStatus.CLOSED);
 
         // Save account
+        System.out.print("Before Saved Account : "+account);
+        
         Account savedAccount = accountRepository.save(account);
-
         // Convert Entity -> DTO
         AccountResponse response =
                 modelMapper.map(savedAccount, AccountResponse.class);

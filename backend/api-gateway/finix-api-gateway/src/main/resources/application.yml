@@ -18,13 +18,13 @@ spring:
             - id: auth-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/users/**
+                - Path=/api/auth/**
 
             # Account APIs
             - id: account-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/account/**
+                - Path=/api/accounts/**
 
             # Transaction APIs
             - id: transaction-service
@@ -42,7 +42,7 @@ spring:
             - id: customer-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/customer/**
+                - Path=/api/customers/**
 
             # Employee APIs
             - id: employee-service
@@ -54,7 +54,7 @@ spring:
             - id: loan-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/loan/**
+                - Path=/api/loans/**
 
             # Card APIs
             - id: card-service
@@ -66,7 +66,7 @@ spring:
             - id: fd-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/fd/**
+                - Path=/api/cards/**
 
             # KYC APIs
             - id: kyc-service
