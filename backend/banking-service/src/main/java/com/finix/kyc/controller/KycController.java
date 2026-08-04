@@ -1,13 +1,19 @@
 package com.finix.kyc.controller;
 
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ModelAttribute;
 
+
+
+import com.finix.kyc.dto.KycUploadRequest;
 import com.finix.auth.dto.ApiResponse;
 import com.finix.kyc.dto.KycDocumentDto;
 import com.finix.kyc.dto.KycDocumentDto2;
@@ -40,5 +46,11 @@ public class KycController {
     	}else {
     		return ResponseEntity.badRequest().body(resp);
     	}
+    }
+    @PostMapping("/upload")
+    public ResponseEntity<ApiResponse> uploadKyc(
+            @ModelAttribute KycUploadRequest request) {//@ModelAttribute- Read all form-data fields and automatically populate my DTO
+
+        return kycService.uploadKyc(request);
     }
 }

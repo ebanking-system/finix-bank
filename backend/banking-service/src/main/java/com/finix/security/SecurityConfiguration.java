@@ -87,11 +87,16 @@ public class SecurityConfiguration {
 		.hasRole("CUSTOMER")
 		.requestMatchers(HttpMethod.PATCH, "/api/customers/profile")
 		.hasRole("CUSTOMER")
+		//KYC END POINTS
+		.requestMatchers(HttpMethod.POST, "/api/kyc/uploads")
+		.hasAnyRole("CUSTOMER")
+		.requestMatchers(HttpMethod.PATCH,"/api/kyc/**")
+		.hasAnyRole("EMPLOYEE","MANAGER")
 		//Customer api endpoints end
 		//Employee api endpoints
 		.requestMatchers(HttpMethod.GET, "/api/employees/profile")
 		.hasAnyRole("EMPLOYEE","MANAGER")
-		.requestMatchers(HttpMethod.PATCH, "/api/employees/profile","/api/kyc/**")
+		.requestMatchers(HttpMethod.PATCH, "/api/employees/profile")
 		.hasAnyRole("EMPLOYEE","MANAGER")
 		.requestMatchers(HttpMethod.GET, "/api/employees")
 		.hasRole("MANAGER")
