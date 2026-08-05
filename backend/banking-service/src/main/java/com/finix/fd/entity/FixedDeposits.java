@@ -1,5 +1,6 @@
 package com.finix.fd.entity;
 
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 
@@ -43,19 +44,19 @@ public class FixedDeposits {
 	private Account account;
 	
 	@Column(name = "deposit_amount", nullable = false)
-	private DecimalFormat depositAmount;
+	private BigDecimal depositAmount;
 	@Column(name = "interest_rate")
-	private DecimalFormat interestRate;
-	@Column(name = "tenure_months")
+	private double interestRate;
+	@Column(name = "tenure_years")
 	@Enumerated(EnumType.STRING)
-	private Tenure tenureMonths;
+	private Tenure tenureYears;
 	@CurrentTimestamp
 	@Column(name = "start_date")
 	private LocalDateTime startDate;
 	@Column(name = "maturity_date")
 	private LocalDateTime maturityDate;
 	@Column(name = "maturity_amount")
-	private DecimalFormat maturityAmount;
+	private BigDecimal maturityAmount;
 	@Column(name = "status")
 	@Enumerated(EnumType.STRING)
 	private Status status;

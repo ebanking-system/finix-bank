@@ -7,6 +7,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum Tenure {
 
-    HALF_YEAR(6),ONE_YEAR(12),TWO_YEARS(24),THREE_YEARS(36),FOUR_YEARS(48),FIVE_YEARS(50);
+    ONE_YEAR(1),TWO_YEARS(2),THREE_YEARS(3),FOUR_YEARS(4),FIVE_YEARS(5);
     private final int months;
 }
