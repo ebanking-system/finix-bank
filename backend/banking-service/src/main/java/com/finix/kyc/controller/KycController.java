@@ -54,7 +54,7 @@ public class KycController {
 
         return kycService.uploadKyc(request);
     }
-    @GetMapping("/{status}")
+    @GetMapping("/status/{status}")
     public ResponseEntity<?> getKycByStatus(@PathVariable Status status) {
 		return kycService.getKycByStatus(status);
 	}
