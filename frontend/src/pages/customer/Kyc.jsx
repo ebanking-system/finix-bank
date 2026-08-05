@@ -3,7 +3,15 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { toast } from 'react-toastify';
-import { FiUserCheck, FiShield, FiCreditCard, FiImage, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import {
+  FiUserCheck,
+  FiShield,
+  FiCreditCard,
+  FiImage,
+  FiCheckCircle,
+  FiUploadCloud,
+  FiFileText,
+} from 'react-icons/fi';
 import { kycService } from '../../services/kycService';
 import CustomerLayout from '../../components/layout/CustomerLayout';
 import Card from '../../components/common/Card';
@@ -20,15 +28,18 @@ const kycSchema = yup.object().shape({
     .string()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN card format (e.g. ABCDE1234F)')
     .required('PAN card number is required'),
-  selfImage: yup
-    .string()
-    .url('Please enter a valid image URL')
-    .required('Self image photo URL is required'),
+  selfImage: yup.string().url('Please enter a valid image URL').optional(),
 });
 
 const Kyc = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [kycSubmitted, setKycSubmitted] = useState(false);
+
+  // File upload state
+  const [aadharFile, setAadharFile] = useState(null);
+  const [panFile, setPanFile] = useState(null);
+  const [selfieFile, setSelfieFile] = useState(null);
+  const [uploadMode, setUploadMode] = useState('files'); // 'files' | 'urls'
 
   const {
     register,
@@ -44,10 +55,32 @@ const Kyc = () => {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const response = await kycService.submitKyc(data);
-      const msg = typeof response === 'string' ? response : response?.message || 'KYC documents submitted successfully for bank verification!';
-      toast.success(msg);
-      setKycSubmitted(true);
+      if (uploadMode === 'files') {
+        if (!aadharFile || !panFile || !selfieFile) {
+          toast.error('Please upload all required files (Aadhaar Card, PAN Card, and Selfie Photo).');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('aadharFile', aadharFile);
+        formData.append('panFile', panFile);
+        formData.append('selfie', selfieFile);
+
+        const response = await kycService.uploadKyc(formData);
+        const msg = response?.message || 'KYC document files uploaded successfully for verification!';
+        toast.success(msg);
+        setKycSubmitted(true);
+      } else {
+        const response = await kycService.submitKyc({
+          aadharNum: data.aadharNum,
+          panNum: data.panNum,
+          selfImage: data.selfImage,
+        });
+        const msg = typeof response === 'string' ? response : response?.message || 'KYC documents submitted successfully!';
+        toast.success(msg);
+        setKycSubmitted(true);
+      }
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to submit KYC documents.';
       toast.error(msg);
@@ -59,7 +92,7 @@ const Kyc = () => {
   return (
     <CustomerLayout
       title="Digital KYC Verification"
-      subtitle="Submit or resubmit your identity documents for instant paperless account verification."
+      subtitle="Submit or upload your identity documents for instant paperless account verification."
     >
       <div className="max-w-3xl space-y-6">
         {/* Status Alert Banner */}
@@ -73,7 +106,7 @@ const Kyc = () => {
               <p className="text-xs text-slate-500">
                 {kycSubmitted
                   ? 'Your KYC documents have been submitted and are pending employee sign-off.'
-                  : 'Submit your Aadhaar, PAN, and self-image to unlock account features.'}
+                  : 'Upload your Aadhaar, PAN, and selfie photo to complete verification.'}
               </p>
             </div>
           </div>
@@ -83,33 +116,113 @@ const Kyc = () => {
         </div>
 
         {/* KYC Form Card */}
-        <Card title="Submit Identity Documents" subtitle="Target endpoint: PATCH /api/kyc">
+        <Card
+          title="Submit Identity Documents"
+          subtitle="Choose between uploading file documents or supplying digital credentials."
+        >
+          {/* Mode Switcher */}
+          <div className="flex bg-slate-100 p-1 rounded-xl mb-6 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setUploadMode('files')}
+              className={`flex-1 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                uploadMode === 'files'
+                  ? 'bg-white text-navy-900 shadow-xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <FiUploadCloud className="w-4 h-4 text-coral-500" /> Direct File Upload (Recommended)
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadMode('urls')}
+              className={`flex-1 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                uploadMode === 'urls'
+                  ? 'bg-white text-navy-900 shadow-xs font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <FiFileText className="w-4 h-4 text-coral-500" /> Number & Image URL Entry
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <Input
-              label="Aadhaar Number (12 Digits)"
-              placeholder="123456789012"
-              icon={FiCreditCard}
-              error={errors.aadharNum}
-              {...register('aadharNum')}
-            />
+            {uploadMode === 'files' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Aadhaar Card Document (PDF/JPG/PNG)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setAadharFile(e.target.files[0])}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+                  />
+                  {aadharFile && (
+                    <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Selected: {aadharFile.name}</p>
+                  )}
+                </div>
 
-            <Input
-              label="PAN Card Number (10 Chars)"
-              placeholder="ABCDE1234F"
-              className="uppercase"
-              icon={FiCreditCard}
-              error={errors.panNum}
-              {...register('panNum')}
-            />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    PAN Card Document (PDF/JPG/PNG)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setPanFile(e.target.files[0])}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+                  />
+                  {panFile && (
+                    <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Selected: {panFile.name}</p>
+                  )}
+                </div>
 
-            <Input
-              label="Self Image Photo URL"
-              placeholder="https://example.com/my-photo.jpg"
-              icon={FiImage}
-              error={errors.selfImage}
-              helperText="Provide a direct URL to your portrait photo for facial verification."
-              {...register('selfImage')}
-            />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Selfie Portrait Photo (JPG/PNG)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSelfieFile(e.target.files[0])}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+                  />
+                  {selfieFile && (
+                    <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Selected: {selfieFile.name}</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Input
+                  label="Aadhaar Number (12 Digits)"
+                  placeholder="123456789012"
+                  icon={FiCreditCard}
+                  error={errors.aadharNum}
+                  {...register('aadharNum')}
+                />
+
+                <Input
+                  label="PAN Card Number (10 Chars)"
+                  placeholder="ABCDE1234F"
+                  className="uppercase"
+                  icon={FiCreditCard}
+                  error={errors.panNum}
+                  {...register('panNum')}
+                />
+
+                <Input
+                  label="Self Image Photo URL"
+                  placeholder="https://example.com/my-photo.jpg"
+                  icon={FiImage}
+                  error={errors.selfImage}
+                  helperText="Provide a direct URL to your portrait photo for facial verification."
+                  {...register('selfImage')}
+                />
+              </div>
+            )}
 
             <div className="pt-4 border-t border-slate-100 flex justify-end">
               <Button

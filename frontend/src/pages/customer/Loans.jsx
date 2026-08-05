@@ -12,8 +12,11 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiInfo,
+  FiChevronRight,
+  FiCreditCard,
 } from 'react-icons/fi';
 import { loanService } from '../../services/loanService';
+import { loanTypeService } from '../../services/loanTypeService';
 import CustomerLayout from '../../components/layout/CustomerLayout';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
@@ -22,18 +25,11 @@ import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import Spinner from '../../components/common/Spinner';
 
-// TODO: replace with GET /api/loans/types once backend adds it
-const staticLoanTypes = [
-  { id: 1, name: 'Personal Loan (Code #1)' },
-  { id: 2, name: 'Home Loan (Code #2)' },
-  { id: 3, name: 'Vehicle Loan (Code #3)' },
-];
-
 const applyLoanSchema = yup.object().shape({
   loanTypeId: yup
     .number()
-    .typeError('Loan Type Code must be a number')
-    .required('Loan Type ID is required'),
+    .typeError('Please select a valid Loan Type')
+    .required('Loan Type is required'),
   amount: yup
     .number()
     .typeError('Amount must be a number')
@@ -49,7 +45,9 @@ const applyLoanSchema = yup.object().shape({
 
 const Loans = () => {
   const [loans, setLoans] = useState([]);
+  const [loanTypes, setLoanTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [typesLoading, setTypesLoading] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [repaymentsModalOpen, setRepaymentsModalOpen] = useState(false);
 
@@ -66,11 +64,12 @@ const Loans = () => {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(applyLoanSchema),
     defaultValues: {
-      loanTypeId: 1,
+      loanTypeId: '',
       amount: 50000,
       tenureMonths: 12,
     },
@@ -88,14 +87,35 @@ const Loans = () => {
     }
   };
 
+  const fetchLoanTypes = async () => {
+    setTypesLoading(true);
+    try {
+      const data = await loanTypeService.getAllLoanTypes();
+      const list = Array.isArray(data) ? data : [];
+      setLoanTypes(list);
+      if (list.length > 0) {
+        setValue('loanTypeId', list[0].loanTypeId || list[0].id);
+      }
+    } catch (error) {
+      toast.error('Failed to load loan products list.');
+    } finally {
+      setTypesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMyLoans();
+    fetchLoanTypes();
   }, []);
 
   const onApplySubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      await loanService.applyLoan(data);
+      await loanService.applyLoan({
+        loanTypeId: Number(data.loanTypeId),
+        amount: Number(data.amount),
+        tenureMonths: Number(data.tenureMonths),
+      });
       toast.success('Loan application submitted successfully for review!');
       setApplyModalOpen(false);
       reset();
@@ -109,11 +129,12 @@ const Loans = () => {
   };
 
   const openRepaymentsModal = async (loan) => {
+    const lId = loan.loanId || loan.id;
     setSelectedLoan(loan);
     setRepaymentsModalOpen(true);
     setRepaymentsLoading(true);
     try {
-      const data = await loanService.getRepayments(loan.id);
+      const data = await loanService.getRepayments(lId);
       setRepayments(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error('Failed to load repayment schedule.');
@@ -124,17 +145,19 @@ const Loans = () => {
 
   const handlePayEmi = async () => {
     if (!selectedRepayment) return;
+    const rId = selectedRepayment.repaymentId || selectedRepayment.id;
     setIsSubmitting(true);
     try {
-      await loanService.payRepayment(selectedRepayment.id, payAccountType);
+      await loanService.payRepayment(rId, payAccountType);
       toast.success('EMI Payment processed successfully!');
       setPayModalOpen(false);
-      // Refresh repayments
+      // Refresh repayments and loans
       if (selectedLoan) {
         openRepaymentsModal(selectedLoan);
       }
+      fetchMyLoans();
     } catch (error) {
-      const msg = error.response?.data?.message || 'EMI Payment failed. Ensure adequate balance.';
+      const msg = error.response?.data?.message || 'EMI Payment failed. Ensure adequate balance in chosen account.';
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -144,7 +167,7 @@ const Loans = () => {
   return (
     <CustomerLayout
       title="Loans & EMI Management"
-      subtitle="Apply for personal/business loans, view status, and pay monthly EMIs."
+      subtitle="Apply for loans with competitive interest rates, track repayment schedules, and pay monthly EMIs."
     >
       <div className="space-y-6">
         {/* Header Bar */}
@@ -152,7 +175,7 @@ const Loans = () => {
           <div>
             <h2 className="text-lg font-bold text-navy-900">My Loan Applications</h2>
             <p className="text-xs text-slate-500">
-              Track pending, approved, and disbursed loans.
+              Track pending, approved, and disbursed loans, and manage your EMI repayments.
             </p>
           </div>
           <Button variant="primary" icon={FiPlusCircle} onClick={() => setApplyModalOpen(true)}>
@@ -174,7 +197,7 @@ const Loans = () => {
             <div>
               <h3 className="text-base font-bold text-navy-900">No loan applications found</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                You haven't applied for any loans yet. Click below to submit an application.
+                You haven't applied for any loans yet. Click below to explore loan options and apply.
               </p>
             </div>
             <Button variant="primary" icon={FiPlusCircle} onClick={() => setApplyModalOpen(true)}>
@@ -183,45 +206,55 @@ const Loans = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {loans.map((loan) => (
-              <Card
-                key={loan.id}
-                title={`Loan #${loan.id}`}
-                subtitle={`Amount: ₹${Number(loan.amount || 0).toLocaleString('en-IN')}`}
-                action={<Badge variant={loan.status || 'PENDING'}>{loan.status || 'PENDING'}</Badge>}
-              >
-                <div className="space-y-3 text-xs">
-                  <div className="flex justify-between py-1.5 border-b border-slate-100">
-                    <span className="text-slate-500">Tenure</span>
-                    <span className="font-bold text-navy-900">{loan.tenureMonths} Months</span>
-                  </div>
-
-                  {loan.interestRate && (
+            {loans.map((loan) => {
+              const loanId = loan.loanId || loan.id;
+              return (
+                <Card
+                  key={loanId}
+                  title={`Loan #${loanId} — ${loan.loanType || 'General Loan'}`}
+                  subtitle={`Amount: ₹${Number(loan.amount || 0).toLocaleString('en-IN')}`}
+                  action={<Badge variant={loan.status || 'PENDING'}>{loan.status || 'PENDING'}</Badge>}
+                >
+                  <div className="space-y-3 text-xs">
                     <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-500">Interest Rate</span>
-                      <span className="font-bold text-navy-900">{loan.interestRate}% p.a.</span>
+                      <span className="text-slate-500">Tenure</span>
+                      <span className="font-bold text-navy-900">{loan.tenureMonths} Months</span>
                     </div>
-                  )}
 
-                  {loan.rejectionReason && (
-                    <div className="p-2.5 rounded-xl bg-red-50 text-red-700 text-xs">
-                      <span className="font-bold">Rejection Reason:</span> {loan.rejectionReason}
+                    {loan.emi !== undefined && loan.emi !== null && (
+                      <div className="flex justify-between py-1.5 border-b border-slate-100">
+                        <span className="text-slate-500">Monthly EMI</span>
+                        <span className="font-bold text-coral-600">₹{Number(loan.emi).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+
+                    {loan.remainingAmount !== undefined && loan.remainingAmount !== null && (
+                      <div className="flex justify-between py-1.5 border-b border-slate-100">
+                        <span className="text-slate-500">Remaining Balance</span>
+                        <span className="font-bold text-navy-900">₹{Number(loan.remainingAmount).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+
+                    {loan.rejectionReason && (
+                      <div className="p-2.5 rounded-xl bg-red-50 text-red-700 text-xs">
+                        <span className="font-bold">Rejection Reason:</span> {loan.rejectionReason}
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRepaymentsModal(loan)}
+                        icon={FiCalendar}
+                      >
+                        Repayment Schedule & Pay EMI
+                      </Button>
                     </div>
-                  )}
-
-                  <div className="pt-2 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openRepaymentsModal(loan)}
-                      icon={FiCalendar}
-                    >
-                      Repayment Schedule
-                    </Button>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -231,17 +264,38 @@ const Loans = () => {
         isOpen={applyModalOpen}
         onClose={() => setApplyModalOpen(false)}
         title="Apply For a Loan"
-        subtitle="Submit your loan request for bank credit evaluation."
+        subtitle="Select a loan product and submit your request for bank evaluation."
       >
         <form onSubmit={handleSubmit(onApplySubmit)} className="space-y-4">
-          <Input
-            label="Loan Type Code (ID)"
-            type="number"
-            placeholder="1"
-            helperText="Ask your bank for the loan type code (e.g. 1 for Personal, 2 for Home)"
-            error={errors.loanTypeId}
-            {...register('loanTypeId')}
-          />
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+              Loan Type / Product
+            </label>
+            {typesLoading ? (
+              <div className="p-3 text-xs text-slate-500 bg-slate-50 rounded-xl">Loading loan types...</div>
+            ) : loanTypes.length === 0 ? (
+              <div className="p-3 text-xs text-amber-700 bg-amber-50 rounded-xl">
+                No active loan products currently configured.
+              </div>
+            ) : (
+              <select
+                {...register('loanTypeId')}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500 focus:bg-white transition-all cursor-pointer font-medium"
+              >
+                {loanTypes.map((t) => {
+                  const id = t.loanTypeId || t.id;
+                  return (
+                    <option key={id} value={id}>
+                      {t.loanName} — {t.interestRate}% p.a. (Min: ₹{Number(t.minAmount || 0).toLocaleString('en-IN')})
+                    </option>
+                  );
+                })}
+              </select>
+            )}
+            {errors.loanTypeId && (
+              <p className="mt-1 text-xs text-red-500 font-medium">{errors.loanTypeId.message}</p>
+            )}
+          </div>
 
           <Input
             label="Loan Amount (₹)"
@@ -276,8 +330,8 @@ const Loans = () => {
       <Modal
         isOpen={repaymentsModalOpen}
         onClose={() => setRepaymentsModalOpen(false)}
-        title={`Repayment Schedule — Loan #${selectedLoan?.id}`}
-        subtitle="View EMI due dates and make monthly payments."
+        title={`Repayment Schedule — Loan #${selectedLoan?.loanId || selectedLoan?.id}`}
+        subtitle="Detailed EMI breakdown, due dates, and payment options."
         size="lg"
       >
         {repaymentsLoading ? (
@@ -290,35 +344,69 @@ const Loans = () => {
             No repayment schedule available yet. Schedule is generated once the loan is approved and disbursed.
           </p>
         ) : (
-          <div className="space-y-3">
-            {repayments.map((r, i) => (
-              <div
-                key={r.id || i}
-                className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 text-xs"
-              >
-                <div>
-                  <span className="font-bold text-navy-900">EMI #{i + 1} — ₹{Number(r.amount || 0).toLocaleString('en-IN')}</span>
-                  <span className="block text-[11px] text-slate-500">Due: {r.dueDate || 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={r.paid ? 'APPROVED' : 'PENDING'}>
-                    {r.paid ? 'PAID' : 'DUE'}
-                  </Badge>
-                  {!r.paid && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRepayment(r);
-                        setPayModalOpen(true);
-                      }}
-                    >
-                      Pay EMI
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 uppercase font-semibold">
+                    <th className="py-2.5 px-3">EMI #</th>
+                    <th className="py-2.5 px-3">Due Date</th>
+                    <th className="py-2.5 px-3">Amount Due</th>
+                    <th className="py-2.5 px-3">Paid Date</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {repayments.map((r, i) => {
+                    const rId = r.repaymentId || r.id;
+                    const amount = r.amountDue !== undefined ? r.amountDue : r.amount;
+                    const isPaid = r.status === 'PAID' || r.paid === true;
+
+                    return (
+                      <tr key={rId || i} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-3 font-bold text-navy-900">
+                          #{r.emiNumber || i + 1}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600">
+                          {r.dueDate ? new Date(r.dueDate).toLocaleDateString('en-IN') : 'N/A'}
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-navy-900">
+                          ₹{Number(amount || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3 px-3 text-slate-500">
+                          {r.paymentDate ? new Date(r.paymentDate).toLocaleDateString('en-IN') : '—'}
+                        </td>
+                        <td className="py-3 px-3">
+                          <Badge variant={isPaid ? 'APPROVED' : r.status === 'OVERDUE' ? 'REJECTED' : 'PENDING'}>
+                            {r.status || (isPaid ? 'PAID' : 'PENDING')}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          {!isPaid ? (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={FiCreditCard}
+                              onClick={() => {
+                                setSelectedRepayment(r);
+                                setPayModalOpen(true);
+                              }}
+                            >
+                              Pay EMI
+                            </Button>
+                          ) : (
+                            <span className="text-emerald-600 text-xs font-semibold flex items-center justify-end gap-1">
+                              <FiCheckCircle className="w-3.5 h-3.5" /> Paid
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </Modal>
@@ -328,44 +416,55 @@ const Loans = () => {
         isOpen={payModalOpen}
         onClose={() => setPayModalOpen(false)}
         title="Pay Monthly EMI"
-        subtitle={`Amount: ₹${selectedRepayment?.amount || 0}`}
+        subtitle={`EMI #${selectedRepayment?.emiNumber || ''} — Amount: ₹${Number(
+          selectedRepayment?.amountDue || selectedRepayment?.amount || 0
+        ).toLocaleString('en-IN')}`}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-              Select Account For Payment
+              Select Account To Pay From
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setPayAccountType('SAVINGS')}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-1 ${
                   payAccountType === 'SAVINGS'
-                    ? 'border-coral-500 bg-coral-50 text-navy-900'
+                    ? 'border-coral-500 bg-coral-50 text-navy-900 shadow-xs'
                     : 'border-slate-200 hover:border-slate-300 text-slate-600'
                 }`}
               >
-                SAVINGS
+                <span>SAVINGS</span>
+                <span className="text-[10px] text-slate-400 font-normal">Savings Account</span>
               </button>
               <button
                 type="button"
                 onClick={() => setPayAccountType('CURRENT')}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-1 ${
                   payAccountType === 'CURRENT'
-                    ? 'border-coral-500 bg-coral-50 text-navy-900'
+                    ? 'border-coral-500 bg-coral-50 text-navy-900 shadow-xs'
                     : 'border-slate-200 hover:border-slate-300 text-slate-600'
                 }`}
               >
-                CURRENT
+                <span>CURRENT</span>
+                <span className="text-[10px] text-slate-400 font-normal">Current Account</span>
               </button>
             </div>
+          </div>
+
+          <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-800 text-xs flex items-start gap-2">
+            <FiInfo className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              The EMI amount of <strong>₹{Number(selectedRepayment?.amountDue || selectedRepayment?.amount || 0).toLocaleString('en-IN')}</strong> will be directly debited from your {payAccountType} account balance.
+            </span>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setPayModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handlePayEmi} isLoading={isSubmitting}>
+            <Button variant="primary" onClick={handlePayEmi} isLoading={isSubmitting} icon={FiCheckCircle}>
               Confirm EMI Payment
             </Button>
           </div>

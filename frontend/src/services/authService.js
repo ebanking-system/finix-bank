@@ -1,4 +1,16 @@
-import api from './api';
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090';
+
+/**
+ * Dedicated clean axios instance for auth endpoints (signin / signup).
+ * No JWT interceptors — never attaches Authorization header.
+ * A stale token in localStorage must never block public routes.
+ */
+const authApi = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
 
 export const authService = {
   /**
@@ -7,7 +19,7 @@ export const authService = {
    * @returns {Promise<{ id: string|number, userRole: string, jwt: string }>}
    */
   async signin(credentials) {
-    const response = await api.post('/api/auth/signin', credentials);
+    const response = await authApi.post('/api/auth/signin', credentials);
     return response.data;
   },
 
@@ -22,7 +34,7 @@ export const authService = {
       ...rest,
       passwordHash: password, // Backend expects passwordHash key
     };
-    const response = await api.post('/api/auth/signup', payload);
+    const response = await authApi.post('/api/auth/signup', payload);
     return response.data;
   },
 };

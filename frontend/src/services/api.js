@@ -13,11 +13,18 @@ const api = axios.create({
 });
 
 // Request Interceptor: Attach JWT Token
+// Skip attaching token for public auth routes (signin/signup) so a stale/expired
+// JWT in localStorage does not cause the backend JWT filter to block these endpoints.
+const PUBLIC_ROUTES = ['/api/auth/signin', '/api/auth/signup'];
+
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('jwt');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const isPublicRoute = PUBLIC_ROUTES.some((route) => config.url?.includes(route));
+    if (!isPublicRoute) {
+      const token = localStorage.getItem('jwt');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
