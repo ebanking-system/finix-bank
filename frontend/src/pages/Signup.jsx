@@ -18,6 +18,8 @@ import {
 import { authService } from '../services/authService';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
+import Select from '../components/common/Select';
+import { ACCOUNT_TYPES } from '../services/accountTypes';
 
 // Validation Schema matching RegistrationDto requirements
 const signupSchema = yup.object().shape({
@@ -43,6 +45,10 @@ const signupSchema = yup.object().shape({
     .string()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN format (e.g., ABCDE1234F)')
     .required('PAN number is required'),
+  accountType: yup
+    .string()
+    .oneOf(Object.values(ACCOUNT_TYPES), 'Select a valid account type')
+    .required('Account type is required'),
 });
 
 const Signup = () => {
@@ -57,6 +63,7 @@ const Signup = () => {
     resolver: yupResolver(signupSchema),
     defaultValues: {
       middleName: '',
+      accountType: ACCOUNT_TYPES.SAVINGS,
     },
   });
 
@@ -124,7 +131,14 @@ const Signup = () => {
                   {...register('lastName')}
                 />
               </div>
-            </div>
+                        </div>
+            {/* Account Type */}
+            <Select
+              label="Account Type"
+              options={Object.entries(ACCOUNT_TYPES).map(([key, value]) => ({ value, label: key.charAt(0) + key.slice(1).toLowerCase() }))}
+              error={errors.accountType}
+              {...register('accountType')}
+            />
 
             {/* Account Credentials */}
             <div>
