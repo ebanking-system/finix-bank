@@ -98,9 +98,32 @@ public class SecurityConfiguration {
 		.hasRole("CUSTOMER")
 		//KYC END POINTS
 		.requestMatchers(HttpMethod.POST, "/api/kyc/uploads")
-		.hasAnyRole("CUSTOMER")
+		.hasRole("CUSTOMER")
 		.requestMatchers(HttpMethod.PATCH,"/api/kyc/**")
 		.hasAnyRole("EMPLOYEE","MANAGER")
+		.requestMatchers(HttpMethod.PATCH,"/api/kyc")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.GET,"/api/kyc/status/**")
+		.hasRole("EMPLOYEE")
+		.requestMatchers(HttpMethod.PATCH,"/api/kyc/**")
+		.hasRole("EMPLOYEE")
+		//Cards End Points
+		.requestMatchers(HttpMethod.POST,"/api/cards/add")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.GET,"/api/cards/get/**")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.PUT,"/api/cards/deactivate")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.PATCH,"/api/cards/pinUpdate")
+		.hasRole("CUSTOMER")
+		//FD End Points
+		.requestMatchers(HttpMethod.GET,"/api/create")
+		.hasRole("CUSTOMER")
+		.requestMatchers(HttpMethod.POST,"/api/get/**")
+		.hasRole("CUSTOMER")
+		
+		
+		
 		//Customer api endpoints end
 		//Employee api endpoints
 		.requestMatchers(HttpMethod.GET, "/api/employees/profile")

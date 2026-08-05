@@ -105,7 +105,6 @@ public class KycServiceImpl implements KycService{
 		if(status.getStatus()==Status.APPROVED) {
 			KycDocuments kycDocumentEntity=kycDocumentRepository.findById(id).orElseThrow();
 			kycDocumentEntity.setStatus(status.getStatus());
-//			Account account=	accountRepository.findByCustomerAndAccountType(kycDocumentEntity.getCustomer(),status.getAccountType());
 			Account account=	accountRepository.findByAccountTypeAndCustomer(status.getAccountType(),kycDocumentEntity.getCustomer());
 
 			account.setStatus(AccountStatus.ACTIVE);
@@ -117,7 +116,6 @@ public class KycServiceImpl implements KycService{
 	@Override
 	public ResponseEntity<ApiResponse> uploadKyc(KycUploadRequest request) {
 
-	    // 1. Get logged-in customer
 	    Authentication authentication =
 	            SecurityContextHolder.getContext().getAuthentication();
 
@@ -125,24 +123,18 @@ public class KycServiceImpl implements KycService{
 
 	    Long customerId = jwt.getUserId();
 
-	    // 2. Find customer
+	   
 	    Customer customer = customerRepository.findById(customerId)
 	            .orElseThrow(() ->
 	                    new RuntimeException("Customer not found"));
 
-	    // 3. Find KYC record
+
 	    KycDocuments kyc = kycDocumentRepository.findByCustomer(customer);
 
 	    if (kyc == null) {
 	        kyc = new KycDocuments();
 	        kyc.setCustomer(customer);
 	    }
-
-	    // 4. Update text fields
-//	    kyc.setAadharNum(request.getAadharNum());
-//	    kyc.setPanNum(request.getPanNum());
-
-	    // 5. Save uploaded files
 
 	    String aadharPath =
 	            fileStorageUtil.saveFile(request.getAadharFile(), customerId);
@@ -153,19 +145,13 @@ public class KycServiceImpl implements KycService{
 	    String selfiePath =
 	            fileStorageUtil.saveFile(request.getSelfie(), customerId);
 
-	    // 6. Store file paths in database
-
 	    kyc.setAadharFile(aadharPath);
 
 	    kyc.setPanFile(panPath);
 
 	    kyc.setSelfieFile(selfiePath);
 
-	    // 7. KYC must be verified again
-
 	    kyc.setStatus(Status.PENDING);
-
-	    // 8. Save changes
 
 	    kycDocumentRepository.save(kyc);
 
@@ -186,8 +172,7 @@ public class KycServiceImpl implements KycService{
 	    kycDocumentEntity.forEach(kyc -> {
 
 	        KycDocumentDto3 dto = mapper.map(kyc, KycDocumentDto3.class);
-
-	        // Set customerId manually
+	        
 	        if (kyc.getCustomer() != null) {
 	            dto.setCustomerId(kyc.getCustomer().getCustomerId());
 	        }
