@@ -44,5 +44,6 @@ pnpm-debug.log*
 logs/
 
 # --- Notification service (.NET) ---
-notification-service/bin/
-notification-service/obj/
+backend/notification-service/EbankingNotificationService/bin/
+backend/notification-service/EbankingNotificationService/obj/
+backend/notification-service/.vs/
