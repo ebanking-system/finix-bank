@@ -16,6 +16,8 @@ export const beneficiaryService = {
   async getBeneficiaries() {
     const response = await api.get('/api/beneficiary');
     const result = response.data?.data || response.data;
+    console.log(result);
+    
     return Array.isArray(result) ? result : [];
   },
 

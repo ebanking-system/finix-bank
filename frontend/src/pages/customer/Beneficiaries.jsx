@@ -54,7 +54,14 @@ const Beneficiaries = () => {
     setLoading(true);
     try {
       const data = await beneficiaryService.getBeneficiaries();
-      setBeneficiaries(Array.isArray(data) ? data : []);
+      console.log('Fetched beneficiaries:', data);
+      // API may return array directly or an object with a beneficiaries field
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data.beneficiaries)
+        ? data.beneficiaries
+        : [];
+      setBeneficiaries(list);
     } catch (error) {
       toast.error('Could not fetch beneficiaries list.');
     } finally {
@@ -169,7 +176,7 @@ const Beneficiaries = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {beneficiaries.map((b) => (
               <Card
-                key={b.id}
+                key={b.id ?? b.beneficiaryId}
                 title={b.beneficiaryName}
                 subtitle={`Account: ${b.accountNumber}`}
                 action={

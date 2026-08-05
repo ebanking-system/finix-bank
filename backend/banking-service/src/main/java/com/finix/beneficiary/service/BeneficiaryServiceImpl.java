@@ -91,7 +91,7 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
 		if(resp.isEmpty()) {
 			return ResponseEntity.noContent().build();
 		}
-		return ResponseEntity.ok(new ApiResponse("succuss","Beneficiary Account not found"));
+		return ResponseEntity.ok(new ApiResponse("succuss",resp));
 	}
 	@Override
 	public ResponseEntity<?> updateBeneficiary(Long id,String name) {
