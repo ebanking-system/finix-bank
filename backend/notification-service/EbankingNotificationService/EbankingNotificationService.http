@@ -1,0 +1,6 @@
+@EbankingNotificationService_HostAddress = http://localhost:5184
+
+GET {{EbankingNotificationService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
