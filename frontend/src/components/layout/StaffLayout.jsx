@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
 import Badge from '../common/Badge';
+import FinixBotWidget from '../common/FinixBotWidget';
 
 const StaffLayout = ({ children, title, subtitle }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,7 +31,7 @@ const StaffLayout = ({ children, title, subtitle }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row relative">
       {/* Mobile Header */}
       <div className="lg:hidden bg-navy-950 text-white px-4 py-4 flex items-center justify-between border-b border-navy-800 sticky top-0 z-40">
         <Link to="/" className="flex items-center gap-2">
@@ -134,6 +135,9 @@ const StaffLayout = ({ children, title, subtitle }) => {
         )}
         {children}
       </main>
+
+      {/* Floating FinixBot AI Widget */}
+      <FinixBotWidget />
     </div>
   );
 };

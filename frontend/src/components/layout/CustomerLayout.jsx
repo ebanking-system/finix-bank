@@ -13,9 +13,11 @@ import {
   FiMenu,
   FiX,
   FiChevronRight,
+  FiTrendingUp,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
+import FinixBotWidget from '../common/FinixBotWidget';
 
 const navItems = [
   { label: 'Overview', path: '/customer/dashboard', icon: FiHome },
@@ -24,6 +26,7 @@ const navItems = [
   { label: 'Cards', path: '/customer/cards', icon: FiCreditCard },
   { label: 'Digital KYC', path: '/customer/kyc', icon: FiUserCheck },
   { label: 'Loans & EMIs', path: '/customer/loans', icon: FiFileText },
+  { label: 'Fixed Deposits', path: '/customer/fixed-deposits', icon: FiTrendingUp },
   { label: 'Transactions', path: '/customer/transactions', icon: FiRepeat },
   { label: 'My Profile', path: '/customer/profile', icon: FiUser },
 ];
@@ -40,7 +43,7 @@ const CustomerLayout = ({ children, title, subtitle }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row relative">
       {/* Mobile Header Bar */}
       <div className="lg:hidden bg-navy-900 text-white px-4 py-4 flex items-center justify-between border-b border-navy-800 sticky top-0 z-40">
         <Link to="/" className="flex items-center gap-2">
@@ -145,6 +148,9 @@ const CustomerLayout = ({ children, title, subtitle }) => {
         )}
         {children}
       </main>
+
+      {/* Floating FinixBot AI Widget */}
+      <FinixBotWidget />
     </div>
   );
 };

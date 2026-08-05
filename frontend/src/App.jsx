@@ -19,7 +19,8 @@ import Kyc from './pages/customer/Kyc';
 import Loans from './pages/customer/Loans';
 import CustTransactions from './pages/customer/CustTransactions';
 import CustProfile from './pages/customer/CustProfile';
-import { FixedDeposits, Notifications } from './pages/customer/Placeholders';
+import FixedDeposits from './pages/customer/FixedDeposits';
+import { Notifications } from './pages/customer/Placeholders';
 
 // Employee & Manager Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
