@@ -14,6 +14,7 @@ import {
   FiCalendar,
   FiShield,
   FiCheckCircle,
+  FiInfo,
 } from 'react-icons/fi';
 import { authService } from '../services/authService';
 import Input from '../components/common/Input';
@@ -21,7 +22,7 @@ import Button from '../components/common/Button';
 import Select from '../components/common/Select';
 import { ACCOUNT_TYPES } from '../services/accountTypes';
 
-// Validation Schema matching RegistrationDto requirements
+// Validation Schema matching backend AuthRequest & RegistrationDto requirements
 const signupSchema = yup.object().shape({
   firstName: yup.string().trim().required('First name is required'),
   middleName: yup.string().trim().nullable(),
@@ -29,7 +30,10 @@ const signupSchema = yup.object().shape({
   email: yup.string().email('Please enter a valid email address').required('Email is required'),
   password: yup
     .string()
-    .min(6, 'Password must be at least 6 characters')
+    .matches(
+      /^(?=.*\d)(?=.*[a-z])(?=.*[#@$*]).{5,20}$/,
+      'Password must be 5-20 characters, with at least 1 digit, 1 lowercase letter, and 1 special symbol (#, @, $, *)'
+    )
     .required('Password is required'),
   dob: yup.string().required('Date of birth is required'),
   mobile: yup
@@ -74,14 +78,22 @@ const Signup = () => {
         ...data,
         role: 'CUSTOMER', // Fixed customer role for public signup
       };
-      await authService.signup(payload);
+      const resp = await authService.signup(payload);
+      if (resp?.status === 'Failure' || resp?.status === 'failure') {
+        toast.error(resp?.data || resp?.message || 'Registration failed.');
+        return;
+      }
       toast.success('Registration successful! Please sign in to your new account.');
       navigate('/login');
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        (typeof error.response?.data === 'string' ? error.response.data : null) ||
-        'Registration failed. Please check your information and try again.';
+      let message = 'Registration failed. Please check your information and try again.';
+      if (typeof error.response?.data === 'string') {
+        message = error.response.data;
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.data && typeof error.response.data.data === 'string') {
+        message = error.response.data.data;
+      }
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -131,11 +143,15 @@ const Signup = () => {
                   {...register('lastName')}
                 />
               </div>
-                        </div>
+            </div>
+
             {/* Account Type */}
             <Select
               label="Account Type"
-              options={Object.entries(ACCOUNT_TYPES).map(([key, value]) => ({ value, label: key.charAt(0) + key.slice(1).toLowerCase() }))}
+              options={Object.entries(ACCOUNT_TYPES).map(([key, value]) => ({
+                value,
+                label: key.charAt(0) + key.slice(1).toLowerCase(),
+              }))}
               error={errors.accountType}
               {...register('accountType')}
             />
@@ -154,14 +170,20 @@ const Signup = () => {
                   error={errors.email}
                   {...register('email')}
                 />
-                <Input
-                  label="Password"
-                  type="password"
-                  placeholder="••••••••"
-                  icon={FiLock}
-                  error={errors.password}
-                  {...register('password')}
-                />
+                <div>
+                  <Input
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    icon={FiLock}
+                    error={errors.password}
+                    {...register('password')}
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                    <FiInfo className="text-slate-400 shrink-0" />
+                    5-20 chars: min. 1 digit, 1 lowercase letter, 1 special char (#, @, $, *)
+                  </p>
+                </div>
               </div>
             </div>
 

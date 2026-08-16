@@ -32,7 +32,7 @@ export const authService = {
     const { password, ...rest } = formData;
     const payload = {
       ...rest,
-      passwordHash: password, // Backend expects passwordHash key
+      passwordHash: password, // Backend RegistrationDto expects passwordHash key
     };
     const response = await authApi.post('/api/auth/signup', payload);
     return response.data;

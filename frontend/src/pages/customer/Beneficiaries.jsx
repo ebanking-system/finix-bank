@@ -8,7 +8,6 @@ import {
   FiUserPlus,
   FiEdit2,
   FiTrash2,
-  FiSearch,
   FiCreditCard,
   FiCheckCircle,
   FiInfo,
@@ -54,11 +53,9 @@ const Beneficiaries = () => {
     setLoading(true);
     try {
       const data = await beneficiaryService.getBeneficiaries();
-      console.log('Fetched beneficiaries:', data);
-      // API may return array directly or an object with a beneficiaries field
       const list = Array.isArray(data)
         ? data
-        : Array.isArray(data.beneficiaries)
+        : Array.isArray(data?.beneficiaries)
         ? data.beneficiaries
         : [];
       setBeneficiaries(list);
@@ -76,13 +73,21 @@ const Beneficiaries = () => {
   const onAddSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      await beneficiaryService.addBeneficiary(data);
+      const resp = await beneficiaryService.addBeneficiary(data);
+      if (resp?.status === 'Failure' || resp?.status === 'failure') {
+        toast.error(resp?.data || resp?.message || 'Failed to add beneficiary.');
+        return;
+      }
       toast.success('Beneficiary added successfully!');
       setAddModalOpen(false);
       reset();
       fetchBeneficiaries();
     } catch (error) {
-      const msg = error.response?.data?.message || 'Failed to add beneficiary.';
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.data ||
+        (typeof error.response?.data === 'string' ? error.response.data : null) ||
+        'Failed to add beneficiary.';
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
@@ -95,9 +100,14 @@ const Beneficiaries = () => {
       toast.error('Name cannot be empty.');
       return;
     }
+    const id = selectedBeneficiary?.beneficiaryId || selectedBeneficiary?.id;
+    if (!id) {
+      toast.error('Invalid beneficiary ID.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await beneficiaryService.updateBeneficiaryName(selectedBeneficiary.id, editName);
+      await beneficiaryService.updateBeneficiaryName(id, editName);
       toast.success('Beneficiary name updated successfully!');
       setEditModalOpen(false);
       fetchBeneficiaries();
@@ -110,10 +120,14 @@ const Beneficiaries = () => {
   };
 
   const onDeleteConfirm = async () => {
-    if (!selectedBeneficiary) return;
+    const id = selectedBeneficiary?.beneficiaryId || selectedBeneficiary?.id;
+    if (!id) {
+      toast.error('Invalid beneficiary ID.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await beneficiaryService.deleteBeneficiary(selectedBeneficiary.id);
+      await beneficiaryService.deleteBeneficiary(id);
       toast.success('Beneficiary removed successfully.');
       setDeleteModalOpen(false);
       fetchBeneficiaries();
@@ -131,7 +145,7 @@ const Beneficiaries = () => {
     >
       <div className="space-y-6">
         {/* Header Control */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
           <div>
             <h2 className="text-lg font-bold text-navy-900">Registered Beneficiaries</h2>
             <p className="text-xs text-slate-500">
@@ -153,12 +167,12 @@ const Beneficiaries = () => {
 
         {/* Beneficiaries List */}
         {loading ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-3">
+          <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
             <Spinner size="lg" className="text-coral-500" />
             <p className="text-sm font-medium text-slate-600">Loading saved beneficiaries...</p>
           </div>
         ) : beneficiaries.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-4">
+          <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-4">
             <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
               <FiUsers className="w-8 h-8" />
             </div>
@@ -174,9 +188,9 @@ const Beneficiaries = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {beneficiaries.map((b) => (
+            {beneficiaries.map((b, index) => (
               <Card
-                key={b.id ?? b.beneficiaryId}
+                key={b.beneficiaryId || b.id || index}
                 title={b.beneficiaryName}
                 subtitle={`Account: ${b.accountNumber}`}
                 action={
@@ -187,7 +201,7 @@ const Beneficiaries = () => {
                         setEditName(b.beneficiaryName);
                         setEditModalOpen(true);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-navy-900 hover:bg-slate-100 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-navy-900 hover:bg-slate-100 transition-colors cursor-pointer"
                       title="Edit Name"
                     >
                       <FiEdit2 className="w-4 h-4" />
@@ -197,7 +211,7 @@ const Beneficiaries = () => {
                         setSelectedBeneficiary(b);
                         setDeleteModalOpen(true);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                       title="Delete Beneficiary"
                     >
                       <FiTrash2 className="w-4 h-4" />
@@ -244,7 +258,7 @@ const Beneficiaries = () => {
           />
           <Input
             label="IFSC Code"
-            placeholder="e.g. FINIX000101"
+            placeholder="e.g. FINX0000001"
             className="uppercase"
             error={errors.ifscCode}
             {...register('ifscCode')}

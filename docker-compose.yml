@@ -1,0 +1,322 @@
+services:
+  # ==========================================================
+  # Database Service (MySQL 8.0)
+  # ==========================================================
+  mysql:
+    image: mysql:8.0
+    container_name: finix-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: finix
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/seed/seed_manager.sql:/docker-entrypoint-initdb.d/01_seed_manager.sql:ro
+    networks:
+      - finix-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # ==========================================================
+  # Message Broker (RabbitMQ)
+  # ==========================================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: finix-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - finix-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ==========================================================
+  # Service Discovery Registry (Netflix Eureka)
+  # ==========================================================
+  eureka-server:
+    build:
+      context: ./backend/finix-eureka-server
+      dockerfile: Dockerfile
+    image: finix/eureka-server:latest
+    container_name: finix-eureka-server
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx256m"
+      SERVER_PORT: 8761
+      EUREKA_INSTANCE_HOSTNAME: eureka-server
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+    networks:
+      - finix-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 0"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 384M
+        reservations:
+          cpus: '0.2'
+          memory: 192M
+
+  # ==========================================================
+  # Core Banking Microservice (Spring Boot)
+  # ==========================================================
+  banking-service:
+    build:
+      context: ./backend/banking-service
+      dockerfile: Dockerfile
+    image: finix/banking-service:latest
+    container_name: finix-banking-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - rabbitmq
+      - eureka-server
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/finix?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
+      SPRING_DATASOURCE_USERNAME: "root"
+      SPRING_DATASOURCE_PASSWORD: "root"
+      SPRING_RABBITMQ_HOST: "rabbitmq"
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: "guest"
+      SPRING_RABBITMQ_PASSWORD: "guest"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+    volumes:
+      - kyc_uploads:/app/uploads/kyc
+    networks:
+      - finix-network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1.2'
+          memory: 600M
+        reservations:
+          cpus: '0.3'
+          memory: 256M
+
+  # ==========================================================
+  # API Gateway (Spring Cloud Gateway)
+  # ==========================================================
+  api-gateway:
+    build:
+      context: ./backend/finix-api-gateway
+      dockerfile: Dockerfile
+    image: finix/api-gateway:latest
+    container_name: finix-api-gateway
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    depends_on:
+      - eureka-server
+      - banking-service
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx384m"
+      SERVER_PORT: 9090
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: "http://eureka-server:8761/eureka/"
+    networks:
+      - finix-network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 450M
+        reservations:
+          cpus: '0.2'
+          memory: 192M
+
+  # ==========================================================
+  # Notification Service (.NET 10)
+  # ==========================================================
+  notification-service:
+    build:
+      context: ./backend/notification-service
+      dockerfile: Dockerfile
+    image: finix/notification-service:latest
+    container_name: finix-notification-service
+    restart: unless-stopped
+    ports:
+      - "5040:5040"
+    depends_on:
+      - mysql
+      - rabbitmq
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=finix;User=root;Password=root;"
+      RabbitMQ__HostName: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__UserName: "guest"
+      RabbitMQ__Password: "guest"
+      RabbitMQ__QueueName: "notification.queue"
+    networks:
+      - finix-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ==========================================================
+  # AI Assistant FinixBot (Python FastAPI)
+  # ==========================================================
+  finixbot-service:
+    build:
+      context: ./backend/finixbot-service
+      dockerfile: Dockerfile
+    image: finix/finixbot-service:latest
+    container_name: finixbot-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/app/chroma_db
+    networks:
+      - finix-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 384M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+
+  # ==========================================================
+  # React Frontend (SPA Nginx Reverse Proxy)
+  # ==========================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: finix/frontend:latest
+    container_name: finix-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - finix-network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+# ==========================================================
+# Networks & Volumes
+# ==========================================================
+networks:
+  finix-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  chroma_data:
+    driver: local
+  kyc_uploads:
+    driver: local

@@ -12,6 +12,10 @@ import {
   FiClock,
   FiShield,
   FiTrendingUp,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiArrowRight,
+  FiInfo,
 } from 'react-icons/fi';
 import { accountService } from '../../services/accountService';
 import { customerService } from '../../services/customerService';
@@ -70,6 +74,11 @@ const CustomerDashboard = () => {
     ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
     : 'Valued Customer';
 
+  const hasActiveAccount = accounts.some((acc) => acc.status === 'ACTIVE');
+  const hasOnlyClosedAccounts = accounts.length > 0 && accounts.every((acc) => acc.status === 'CLOSED');
+  const hasNoAccounts = accounts.length === 0;
+  const isKycApproved = hasActiveAccount;
+
   return (
     <CustomerLayout>
       <div className="space-y-8">
@@ -104,6 +113,91 @@ const CustomerDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Persistent Warning Banners (Shown when KYC is not yet approved / No active accounts) */}
+        {!isKycApproved && (
+          <div className="space-y-4">
+            {/* Banner 1: KYC Pending / Under Review */}
+            <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-xs">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
+                  <FiAlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-amber-800">
+                      Action Required
+                    </span>
+                    <Badge variant="PENDING">KYC PENDING</Badge>
+                  </div>
+                  <h2 className="text-base font-bold text-navy-900">
+                    Identity Verification Pending
+                  </h2>
+                  <p className="text-xs text-slate-600 max-w-2xl mt-0.5 leading-relaxed">
+                    Your digital identity has not been verified yet. Upload your Aadhaar, PAN card, and portrait photo to enable live banking services and unlock instant fund transfers.
+                  </p>
+                </div>
+              </div>
+              <Link to="/customer/kyc" className="shrink-0 w-full sm:w-auto">
+                <Button variant="primary" size="md" icon={FiArrowRight} className="w-full sm:w-auto">
+                  Submit KYC Now
+                </Button>
+              </Link>
+            </div>
+
+            {/* Banner 2: No Active Account Yet */}
+            <div className="bg-slate-100/90 border border-slate-200 rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-xs">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-navy-900 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <FiCreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
+                      Account Status
+                    </span>
+                    <Badge variant="CLOSED">NO ACTIVE ACCOUNT</Badge>
+                  </div>
+                  <h2 className="text-base font-bold text-navy-900">
+                    Account Inactive / Closed
+                  </h2>
+                  <p className="text-xs text-slate-600 max-w-2xl mt-0.5 leading-relaxed">
+                    A bank account cannot be operated until your Digital KYC is approved. Once approved by a KYC Officer, your account will activate automatically with full transaction capability.
+                  </p>
+                </div>
+              </div>
+              <Link to="/customer/accounts" className="shrink-0 w-full sm:w-auto">
+                <Button variant="outline" size="md" icon={FiInfo} className="w-full sm:w-auto">
+                  View Account Details
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Positive Verified Banner (Shown when KYC is Approved) */}
+        {isKycApproved && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                <FiCheckCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-navy-900 flex items-center gap-2">
+                  Identity Verified & Account Active <Badge variant="ACTIVE">VERIFIED</Badge>
+                </h2>
+                <p className="text-xs text-slate-600">
+                  Your KYC is approved! You can perform 24/7 instant wire transfers, request debit cards, and book fixed deposits.
+                </p>
+              </div>
+            </div>
+            <Link to="/customer/accounts">
+              <Button variant="outline" size="sm" icon={FiPlusCircle}>
+                Open Another Account
+              </Button>
+            </Link>
+          </div>
+        )}
 
         {/* Quick Actions Bar */}
         <div>
@@ -205,16 +299,20 @@ const CustomerDashboard = () => {
           <Card
             title="Digital KYC Verification"
             subtitle="Identity Audit Status"
-            action={<Badge variant="PENDING">PENDING</Badge>}
+            action={<Badge variant={isKycApproved ? 'ACTIVE' : 'PENDING'}>{isKycApproved ? 'APPROVED' : 'ACTION REQUIRED'}</Badge>}
           >
             <div className="space-y-3">
-              <p className="text-xs text-slate-500">Account Limits</p>
+              <p className="text-xs text-slate-500">Verification Status</p>
               <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                Submit your Aadhaar, PAN, and facial self-image to unlock full transaction limits.
+                {isKycApproved
+                  ? 'Your Aadhaar, PAN, and facial selfie are verified. Full transaction limits enabled.'
+                  : 'Submit your Aadhaar, PAN, and facial self-image to unlock account activation and full limits.'}
               </p>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-400 flex items-center gap-1"><FiShield className="text-emerald-500" /> 256-Bit Encrypted</span>
-                <Link to="/customer/kyc" className="font-bold text-coral-500 hover:underline">Submit KYC →</Link>
+                <Link to="/customer/kyc" className="font-bold text-coral-500 hover:underline">
+                  {isKycApproved ? 'View KYC Status →' : 'Submit KYC →'}
+                </Link>
               </div>
             </div>
           </Card>
@@ -266,11 +364,12 @@ const CustomerDashboard = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Badge variant={acc.accountType}>{acc.accountType}</Badge>
+                      <Badge variant={acc.status || 'ACTIVE'}>{acc.status || 'ACTIVE'}</Badge>
                       <span className="text-xs font-mono font-bold text-navy-900">
                         #{acc.accountNumber || acc.id}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500">IFSC: {acc.ifscCode || 'FINIX000101'}</p>
+                    <p className="text-xs text-slate-500">IFSC: {acc.ifscCode || 'FINX0000001'}</p>
                   </div>
                   <div className="text-right">
                     <span className="block text-[10px] text-slate-400 uppercase font-semibold">Balance</span>

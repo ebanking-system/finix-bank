@@ -32,6 +32,11 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       const response = await authService.signin(data);
+      if (!response || !response.jwt) {
+        toast.error('Authentication failed. No token received.');
+        return;
+      }
+
       login(response);
       toast.success('Successfully logged in!');
 
@@ -46,10 +51,14 @@ const Login = () => {
         navigate('/');
       }
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        (typeof error.response?.data === 'string' ? error.response.data : null) ||
-        'Invalid email or password. Please try again.';
+      let message = 'Invalid email or password. Please try again.';
+      if (typeof error.response?.data === 'string') {
+        message = error.response.data;
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response?.data?.data && typeof error.response.data.data === 'string') {
+        message = error.response.data.data;
+      }
       toast.error(message);
     } finally {
       setIsSubmitting(false);

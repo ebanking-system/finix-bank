@@ -7,7 +7,6 @@ import {
   FiRefreshCw,
   FiCheckCircle,
   FiAlertCircle,
-  FiArrowRight,
   FiShield,
 } from 'react-icons/fi';
 import { accountService } from '../../services/accountService';
@@ -36,7 +35,7 @@ const CustAccounts = () => {
         setAccounts(Array.isArray(data) ? data : []);
       }
 
-      // Fetch balances for SAVINGS and CURRENT
+      // Fetch live balances for SAVINGS and CURRENT
       const balancesMap = {};
       try {
         const savingsBal = await accountService.getAccountBalance('SAVINGS');
@@ -71,14 +70,7 @@ const CustAccounts = () => {
 
       // Handle 204 No Content (KYC Not Approved)
       if (response.status === 204) {
-        toast.warn(
-          <div>
-            <p className="font-bold">KYC Approval Required</p>
-            <p className="text-xs mt-1">
-              Your account cannot be opened until your digital KYC is approved by the bank.
-            </p>
-          </div>
-        );
+        toast.warn('Your account cannot be opened until your Digital KYC is approved by the bank.');
         setModalOpen(false);
         return;
       }
@@ -104,9 +96,9 @@ const CustAccounts = () => {
     >
       <div className="space-y-6">
         {/* Header Action Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-navy-900 text-white flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-navy-900 text-white flex items-center justify-center">
               <FiCreditCard className="w-6 h-6" />
             </div>
             <div>
@@ -179,12 +171,12 @@ const CustAccounts = () => {
 
         {/* Accounts List Table / Cards */}
         {loading ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-3">
+          <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
             <Spinner size="lg" className="text-coral-500" />
             <p className="text-sm font-medium text-slate-600">Fetching bank account records...</p>
           </div>
         ) : accounts.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-4">
+          <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 space-y-4">
             <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
               <FiCreditCard className="w-8 h-8" />
             </div>
@@ -202,15 +194,15 @@ const CustAccounts = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {accounts.map((acc, index) => (
               <Card
-                key={acc.id || acc.accountNumber || index}
-                title={`Account #${acc.accountNumber || acc.id}`}
-                subtitle={`IFSC: ${acc.ifscCode || 'FINIX000101'}`}
-                action={<Badge variant={acc.accountType}>{acc.accountType}</Badge>}
+                key={acc.accountId || acc.accountNumber || index}
+                title={`Account #${acc.accountNumber || acc.accountId}`}
+                subtitle={`IFSC: ${acc.ifscCode || 'FINX0000001'}`}
+                action={<Badge variant={acc.status || 'ACTIVE'}>{acc.status || 'ACTIVE'}</Badge>}
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-2 border-b border-slate-100">
                     <span className="text-xs text-slate-500">Account Type</span>
-                    <span className="text-sm font-semibold text-navy-900">{acc.accountType}</span>
+                    <span className="text-sm font-bold text-navy-900">{acc.accountType}</span>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-slate-100">
@@ -221,9 +213,9 @@ const CustAccounts = () => {
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                    <span>Status: Active</span>
+                    <span>Status</span>
                     <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                      <FiCheckCircle /> Verified
+                      <FiCheckCircle /> {acc.status || 'ACTIVE'}
                     </span>
                   </div>
                 </div>

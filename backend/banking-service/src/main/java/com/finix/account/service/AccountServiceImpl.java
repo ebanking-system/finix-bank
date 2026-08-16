@@ -41,26 +41,23 @@ public class AccountServiceImpl implements AccountService {
     private final KycDocumentRepository kycDocumentRepository;
     private final ModelMapper modelMapper;
 
-    
+    @Override
+    public AccountResponse openAccountForCurrentCustomer(CreateAccountRequest request) {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+        Long userId = jwt.getUserId();
+
+        Customer customer = customerRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException("Customer not found"));
+
+        return createAccount(request.getAccountType(), customer);
+    }
 
     @Override
     public AccountResponse createAccount(AccountType accType , Customer customer) {
-    	
-//    	Authentication authentication =
-//    	        SecurityContextHolder.getContext().getAuthentication();
-
-//    	CustomUserDetailsImpl user =
-//    	        (CustomUserDetailsImpl) authentication.getPrincipal();
-    	
-//    	JwtDTO jwt =
-//        		(JwtDTO) authentication.getPrincipal();
-
-//    	Long userId = jwt.getUserId();
-    	
-        // Check whether customer exists
-//        Customer customer = customerRepository.findById(userId)
-//                .orElseThrow(() ->
-//                        new RuntimeException("Customer not found"));
         KycDocuments kycAccount=kycDocumentRepository.findByCustomer(customer);
         if(kycAccount==null) {
         	return null;
@@ -88,8 +85,6 @@ public class AccountServiceImpl implements AccountService {
         // Convert Entity -> DTO
         AccountResponse response =
                 modelMapper.map(savedAccount, AccountResponse.class);
-
-//        response.setCustomerId(customer.getUser().getUserId());
 
         return response;
     }
@@ -160,12 +155,8 @@ public class AccountServiceImpl implements AccountService {
         AccountResponse response =
                 modelMapper.map(account, AccountResponse.class);
 
-//        response.setCustomerId(account.getCustomer().getUser().getUserId());
-        
-
         return new ApiResponse("success",response);
     }
-    
     
     @Override
     public ApiResponse getAccountByNumber(String accountNumber) {
@@ -227,8 +218,6 @@ public class AccountServiceImpl implements AccountService {
                     AccountResponse response =
                             modelMapper.map(account, AccountResponse.class);
 
-//                    response.setCustomerId(customer.getUser().getUserId());
-
                     return response;
 
                 })
@@ -237,12 +226,8 @@ public class AccountServiceImpl implements AccountService {
 
 	@Override
 	public ResponseEntity<?> getBalance(AccountType accountType) {
-		// TODO Auto-generated method stub
 		Authentication authentication =
     	        SecurityContextHolder.getContext().getAuthentication();
-
-//    	CustomUserDetailsImpl user =
-//    	        (CustomUserDetailsImpl) authentication.getPrincipal();
 		
 		JwtDTO jwt =
         		(JwtDTO) authentication.getPrincipal();
@@ -257,7 +242,5 @@ public class AccountServiceImpl implements AccountService {
     	}catch(Exception ex) {
     		return ResponseEntity.badRequest().body("ERROR :"+ex.getMessage());
     	}
-    	
 	}
-
 }

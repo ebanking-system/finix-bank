@@ -8,10 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install lightweight CPU-only PyTorch first to prevent downloading 3.5GB CUDA packages
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
 # Copy dependency requirements
 COPY requirements.txt .
 
-# Install dependencies
+# Install remaining dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy service source code

@@ -5,13 +5,10 @@ import java.util.List;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-
 
 import com.finix.util.FileStorageUtil;
 import com.finix.kyc.dto.KycUploadRequest;
@@ -35,14 +32,17 @@ import com.finix.kyc.dto.StatusDto;
 import com.finix.kyc.entity.KycDocuments;
 import com.finix.kyc.entity.Status;
 import com.finix.kyc.repository.KycDocumentRepository;
+import com.finix.notification.dto.NotificationEvent;
+import com.finix.notification.producer.NotificationProducer;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
-
-public class KycServiceImpl implements KycService{
+@Slf4j
+public class KycServiceImpl implements KycService {
 
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
@@ -51,22 +51,22 @@ public class KycServiceImpl implements KycService{
 	private final EmployeeRepository employeeRepository;
 	private final FileStorageUtil fileStorageUtil;
 	private final ModelMapper mapper;
+	private final NotificationProducer notificationProducer;
 
-    
 	@Override
 	public ResponseEntity<ApiResponse> updateKyc(KycDocumentDto2 request) {
-		
-
 	    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
 	    JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
-
 	    Long customerId = jwt.getUserId();
 
 	    Customer customer = customerRepository.findById(customerId)
 	            .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 	    KycDocuments kyc = kycDocumentRepository.findByCustomer(customer);
-	            
+
+	    if (kyc == null) {
+	        kyc = new KycDocuments();
+	        kyc.setCustomer(customer);
+	    }
 
 	    if (request.getAadharNum() != null && !request.getAadharNum().isBlank()) {
 	        kyc.setAadharNum(request.getAadharNum());
@@ -76,81 +76,100 @@ public class KycServiceImpl implements KycService{
 	        kyc.setPanNum(request.getPanNum());
 	    }
 
-//	    if (request.getSelfImage() != null && !request.getSelfImage().isBlank()) {
-//	        kyc.selfieFile(request.getSelfImage());
-//	    }
-
 	    // Since documents changed, KYC should be verified again
 	    kyc.setStatus(Status.PENDING);
-
 	    kycDocumentRepository.save(kyc);
 
 	    return ResponseEntity.ok(new ApiResponse("success", "KYC Sent For Approval."));
 	}
-	@Override
-	public ApiResponse updateStatus(Long id , StatusDto status) {
-		// TODO Auto-generated method stub
-		Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-		JwtDTO jwtDto=(JwtDTO) authentication.getPrincipal();
-		System.out.print("Role : "+jwtDto.getRoleName());
-		if(jwtDto.getRoleName().equals(Role.CUSTOMER)) {
-			
-			return new ApiResponse("failure","ACCESS DENIED"); 
-		}
-		Employee emp=employeeRepository.findById(jwtDto.getUserId()).orElseThrow();
-		System.out.print(emp);
-		if(!emp.getDesignation().equals(Designation.KYC_OFFICER)) {
-			return new ApiResponse("failure","ACCESS DENIED"); 
-		}
-		if(status.getStatus()==Status.APPROVED) {
-			KycDocuments kycDocumentEntity=kycDocumentRepository.findById(id).orElseThrow();
-			kycDocumentEntity.setStatus(status.getStatus());
-			Account account=	accountRepository.findByAccountTypeAndCustomer(status.getAccountType(),kycDocumentEntity.getCustomer());
 
-			account.setStatus(AccountStatus.ACTIVE);
-			return new ApiResponse("success","status update to APPROVED");			
+	@Override
+	public ApiResponse updateStatus(Long id, StatusDto status) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwtDto = (JwtDTO) authentication.getPrincipal();
+
+		if (jwtDto.getRoleName().equals(Role.CUSTOMER)) {
+			return new ApiResponse("failure", "ACCESS DENIED"); 
 		}
-		return new ApiResponse("success","status update to REJECTED");
+
+		Employee emp = employeeRepository.findById(jwtDto.getUserId()).orElseThrow();
+		if (!emp.getDesignation().equals(Designation.KYC_OFFICER)) {
+			return new ApiResponse("failure", "ACCESS DENIED"); 
+		}
+
+		KycDocuments kycDocumentEntity = kycDocumentRepository.findById(id).orElseThrow();
+
+		if (status.getStatus() == Status.APPROVED) {
+			kycDocumentEntity.setStatus(status.getStatus());
+			Account account = accountRepository.findByAccountTypeAndCustomer(status.getAccountType(), kycDocumentEntity.getCustomer());
+			if (account != null) {
+				account.setStatus(AccountStatus.ACTIVE);
+			}
+
+			// Publish KYC approval notification to RabbitMQ
+			try {
+				if (kycDocumentEntity.getCustomer() != null && kycDocumentEntity.getCustomer().getUser() != null) {
+					NotificationEvent event = NotificationEvent.builder()
+							.customerId(kycDocumentEntity.getCustomer().getCustomerId())
+							.eventType("KYC_APPROVED")
+							.title("KYC Approved — Account Activated")
+							.message("Your KYC verification has been approved. Your bank account is now ACTIVE and ready for transactions.")
+							.email(kycDocumentEntity.getCustomer().getUser().getEmail())
+							.channels(List.of("EMAIL", "IN_APP"))
+							.build();
+					notificationProducer.send(event);
+				}
+			} catch (Exception ex) {
+				log.warn("Could not publish KYC approval notification: {}", ex.getMessage());
+			}
+
+			return new ApiResponse("success", "status update to APPROVED");			
+		} else {
+			kycDocumentEntity.setStatus(Status.REJECTED);
+
+			// Publish KYC rejection notification to RabbitMQ
+			try {
+				if (kycDocumentEntity.getCustomer() != null && kycDocumentEntity.getCustomer().getUser() != null) {
+					NotificationEvent event = NotificationEvent.builder()
+							.customerId(kycDocumentEntity.getCustomer().getCustomerId())
+							.eventType("KYC_REJECTED")
+							.title("KYC Verification Update")
+							.message("Your KYC documents were rejected. Please review and re-upload valid Aadhaar and PAN documents.")
+							.email(kycDocumentEntity.getCustomer().getUser().getEmail())
+							.channels(List.of("EMAIL", "IN_APP"))
+							.build();
+					notificationProducer.send(event);
+				}
+			} catch (Exception ex) {
+				log.warn("Could not publish KYC rejection notification: {}", ex.getMessage());
+			}
+
+			return new ApiResponse("success", "status update to REJECTED");
+		}
 	}
 	
 	@Override
 	public ResponseEntity<ApiResponse> uploadKyc(KycUploadRequest request) {
-
-	    Authentication authentication =
-	            SecurityContextHolder.getContext().getAuthentication();
-
+	    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 	    JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
-
 	    Long customerId = jwt.getUserId();
 
-	   
 	    Customer customer = customerRepository.findById(customerId)
-	            .orElseThrow(() ->
-	                    new RuntimeException("Customer not found"));
-
+	            .orElseThrow(() -> new RuntimeException("Customer not found"));
 
 	    KycDocuments kyc = kycDocumentRepository.findByCustomer(customer);
-
 	    if (kyc == null) {
 	        kyc = new KycDocuments();
 	        kyc.setCustomer(customer);
 	    }
 
-	    String aadharPath =
-	            fileStorageUtil.saveFile(request.getAadharFile(), customerId);
-
-	    String panPath =
-	            fileStorageUtil.saveFile(request.getPanFile(), customerId);
-
-	    String selfiePath =
-	            fileStorageUtil.saveFile(request.getSelfie(), customerId);
+	    String aadharPath = fileStorageUtil.saveFile(request.getAadharFile(), customerId);
+	    String panPath = fileStorageUtil.saveFile(request.getPanFile(), customerId);
+	    String selfiePath = fileStorageUtil.saveFile(request.getSelfie(), customerId);
 
 	    kyc.setAadharFile(aadharPath);
-
 	    kyc.setPanFile(panPath);
-
 	    kyc.setSelfieFile(selfiePath);
-
 	    kyc.setStatus(Status.PENDING);
 
 	    kycDocumentRepository.save(kyc);
@@ -162,21 +181,17 @@ public class KycServiceImpl implements KycService{
 	            )
 	    );
 	}
+
 	@Override
 	public ResponseEntity<?> getKycByStatus(Status status) {
-
 	    List<KycDocuments> kycDocumentEntity = kycDocumentRepository.findByStatus(status);
-
 	    List<KycDocumentDto3> response = new ArrayList<>();
 
 	    kycDocumentEntity.forEach(kyc -> {
-
 	        KycDocumentDto3 dto = mapper.map(kyc, KycDocumentDto3.class);
-	        
 	        if (kyc.getCustomer() != null) {
 	            dto.setCustomerId(kyc.getCustomer().getCustomerId());
 	        }
-
 	        response.add(dto);
 	    });
 

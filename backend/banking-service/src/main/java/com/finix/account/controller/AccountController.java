@@ -8,8 +8,6 @@ import com.finix.auth.dto.ApiResponse;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,20 +23,20 @@ public class AccountController {
     }
 
     /**
-     * Create New Bank Account
+     * Create New Bank Account for Authenticated Customer
      */
-//    @PostMapping
-//    public ResponseEntity<?> createAccount(
-//            @Valid @RequestBody AccountType accType) {
-//
-//        AccountResponse response =
-//                accountService.createAccount(accType,);
-//        if(response==null) {
-//        	return new ResponseEntity<>("KYC NOT APPROVED YET",HttpStatus.NO_CONTENT);
-//        }
-//
-//        return new ResponseEntity<>(response, HttpStatus.CREATED);
-//    }
+    @PostMapping
+    public ResponseEntity<?> createAccount(
+            @Valid @RequestBody CreateAccountRequest request) {
+
+        AccountResponse response =
+                accountService.openAccountForCurrentCustomer(request);
+        if(response==null) {
+        	return new ResponseEntity<>("KYC NOT APPROVED YET",HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
     
     @GetMapping("/{accountId}")
     public ResponseEntity<ApiResponse> getAccountById(
@@ -65,7 +63,7 @@ public class AccountController {
     }
     
     @GetMapping("/balance")
-    public ResponseEntity<?>getAccountBalance(@RequestParam AccountType accountType){
+    public ResponseEntity<?> getAccountBalance(@RequestParam AccountType accountType){
     	return accountService.getBalance(accountType);
     }
 }

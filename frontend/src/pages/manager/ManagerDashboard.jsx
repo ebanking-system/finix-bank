@@ -8,10 +8,6 @@ import {
   FiShield,
   FiMail,
   FiLock,
-  FiPhone,
-  FiMapPin,
-  FiCreditCard,
-  FiCalendar,
   FiBriefcase,
   FiList,
   FiPlus,
@@ -20,10 +16,16 @@ import {
   FiPercent,
   FiDollarSign,
   FiClock,
+  FiUsers,
+  FiRefreshCw,
+  FiCheckCircle,
+  FiInfo,
+  FiCheck,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 import { loanTypeService } from '../../services/loanTypeService';
+import { employeeService } from '../../services/employeeService';
 import Navbar from '../../components/common/Navbar';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
@@ -32,17 +34,24 @@ import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import Spinner from '../../components/common/Spinner';
 
+const DEPARTMENTS = ['MANAGEMENT', 'KYC', 'ACCOUNTS', 'LOANS', 'CUSTOMER_SERVICE'];
+const DESIGNATIONS = ['MANAGER', 'KYC_OFFICER', 'ACCOUNT_OFFICER', 'LOAN_OFFICER', 'CUSTOMER_SERVICE_OFFICER'];
+
+// Reduced schema matching employee-relevant fields only
 const addEmployeeSchema = yup.object().shape({
   firstName: yup.string().trim().required('First name is required'),
   middleName: yup.string().trim().nullable(),
   lastName: yup.string().trim().required('Last name is required'),
   email: yup.string().email('Valid email is required').required('Email is required'),
-  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
-  dob: yup.string().required('Date of birth is required'),
-  mobile: yup.string().matches(/^[0-9]{10}$/, '10-digit mobile number required').required('Mobile is required'),
-  address: yup.string().trim().required('Address is required'),
-  aadharNum: yup.string().matches(/^[0-9]{12}$/, '12-digit Aadhaar number required').required('Aadhaar is required'),
-  panNum: yup.string().matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN format').required('PAN is required'),
+  password: yup
+    .string()
+    .matches(
+      /^(?=.*\d)(?=.*[a-z])(?=.*[#@$*]).{5,20}$/,
+      'Password must be 5-20 characters: min 1 digit, 1 lowercase letter, 1 special symbol (#, @, $, *)'
+    )
+    .required('Password is required'),
+  department: yup.string().oneOf(DEPARTMENTS).required('Department is required'),
+  designation: yup.string().oneOf(DESIGNATIONS).required('Designation is required'),
 });
 
 const loanTypeSchema = yup.object().shape({
@@ -56,9 +65,19 @@ const loanTypeSchema = yup.object().shape({
 
 const ManagerDashboard = () => {
   const { userId } = useAuth();
-  const [activeTab, setActiveTab] = useState('loan-types'); // 'loan-types' | 'employees'
+  const [activeTab, setActiveTab] = useState('loan-types'); // 'loan-types' | 'employee-roster' | 'register-employee'
 
-  // Employee form state
+  // Employee Roster state
+  const [employees, setEmployees] = useState([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [editDept, setEditDept] = useState('LOANS');
+  const [editDesig, setEditDesig] = useState('LOAN_OFFICER');
+  const [isUpdatingAssignment, setIsUpdatingAssignment] = useState(false);
+  const [isDeletingEmpId, setIsDeletingEmpId] = useState(null);
+
+  // Employee Register form state
   const [isEmployeeSubmitting, setIsEmployeeSubmitting] = useState(false);
   const {
     register: registerEmp,
@@ -67,7 +86,11 @@ const ManagerDashboard = () => {
     formState: { errors: errorsEmp },
   } = useForm({
     resolver: yupResolver(addEmployeeSchema),
-    defaultValues: { middleName: '' },
+    defaultValues: {
+      middleName: '',
+      department: 'KYC',
+      designation: 'KYC_OFFICER',
+    },
   });
 
   // Loan Types catalog state
@@ -101,23 +124,46 @@ const ManagerDashboard = () => {
       const data = await loanTypeService.getAllLoanTypes();
       setLoanTypes(Array.isArray(data) ? data : []);
     } catch (error) {
-      toast.error('Failed to load loan products catalog.');
+      if (error.response?.status !== 401 && error.response?.status !== 403) {
+        toast.error('Failed to load loan products catalog.');
+      }
     } finally {
       setLoanTypesLoading(false);
     }
   };
 
+  const fetchEmployees = async () => {
+    setEmployeesLoading(true);
+    try {
+      const data = await employeeService.getAllEmployees();
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (error) {
+      if (error.response?.status !== 401 && error.response?.status !== 403) {
+        toast.error('Failed to load employee roster.');
+      }
+    } finally {
+      setEmployeesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchLoanTypes();
+    fetchEmployees();
   }, []);
 
   const onAddEmployeeSubmit = async (data) => {
     setIsEmployeeSubmitting(true);
     try {
       const payload = { ...data, role: 'EMPLOYEE' };
-      await authService.signup(payload);
+      const resp = await authService.signup(payload);
+      if (resp?.status === 'Failure' || resp?.status === 'failure') {
+        toast.error(resp?.data || resp?.message || 'Failed to register employee.');
+        return;
+      }
       toast.success(`Employee ${data.firstName} ${data.lastName} successfully registered!`);
       resetEmp();
+      fetchEmployees();
+      setActiveTab('employee-roster');
     } catch (error) {
       const message =
         error.response?.data?.message ||
@@ -126,6 +172,53 @@ const ManagerDashboard = () => {
       toast.error(message);
     } finally {
       setIsEmployeeSubmitting(false);
+    }
+  };
+
+  const handleOpenEditAssignment = (emp) => {
+    setSelectedEmployee(emp);
+    setEditDept(emp.department || 'LOANS');
+    setEditDesig(emp.designation || 'LOAN_OFFICER');
+    setAssignmentModalOpen(true);
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!selectedEmployee) return;
+    const empId = selectedEmployee.employeeId || selectedEmployee.id;
+    setIsUpdatingAssignment(true);
+    try {
+      await employeeService.updateEmployeeAssignment(empId, {
+        department: editDept,
+        designation: editDesig,
+      });
+      toast.success(`Assignment for ${selectedEmployee.firstName} updated!`);
+      setAssignmentModalOpen(false);
+      fetchEmployees();
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to update employee assignment.';
+      toast.error(msg);
+    } finally {
+      setIsUpdatingAssignment(false);
+    }
+  };
+
+  const handleDeleteEmployee = async (emp) => {
+    const empId = emp.employeeId || emp.id;
+    const fullName = [emp.firstName, emp.lastName].filter(Boolean).join(' ');
+    if (!window.confirm(`Are you sure you want to delete employee "${fullName}" (ID: #${empId})?`)) {
+      return;
+    }
+
+    setIsDeletingEmpId(empId);
+    try {
+      await employeeService.deleteEmployee(empId);
+      toast.success(`Employee "${fullName}" deleted successfully.`);
+      fetchEmployees();
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to delete employee.';
+      toast.error(msg);
+    } finally {
+      setIsDeletingEmpId(null);
     }
   };
 
@@ -214,31 +307,41 @@ const ManagerDashboard = () => {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight">Executive Management Console</h1>
             <p className="text-sm text-slate-300 mt-1">
-              Oversee bank operations, manage loan products catalog, and onboard bank employees.
+              Oversee bank operations, manage loan products catalog, and handle staff assignments.
             </p>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex bg-navy-800/80 p-1.5 rounded-2xl border border-navy-700/80">
+          <div className="flex flex-wrap bg-navy-800/80 p-1.5 rounded-2xl border border-navy-700/80 gap-1">
             <button
               onClick={() => setActiveTab('loan-types')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'loan-types'
                   ? 'bg-coral-500 text-white shadow-md'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <FiList className="w-4 h-4" /> Loan Products Catalog
+              <FiList className="w-4 h-4" /> Loan Products
             </button>
             <button
-              onClick={() => setActiveTab('employees')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'employees'
+              onClick={() => setActiveTab('employee-roster')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'employee-roster'
                   ? 'bg-coral-500 text-white shadow-md'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <FiUserPlus className="w-4 h-4" /> Register Employee
+              <FiUsers className="w-4 h-4" /> Staff Roster ({employees.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('register-employee')}
+              className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'register-employee'
+                  ? 'bg-coral-500 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <FiUserPlus className="w-4 h-4" /> Onboard Staff
             </button>
           </div>
         </div>
@@ -325,43 +428,161 @@ const ManagerDashboard = () => {
           </div>
         )}
 
-        {/* TAB 2: Register Employee Form */}
-        {activeTab === 'employees' && (
+        {/* TAB 2: Employee Roster & Assignment Manager */}
+        {activeTab === 'employee-roster' && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-md space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-bold text-navy-900 flex items-center gap-2">
+                  <FiUsers className="text-coral-500" /> Staff Roster & Department Assignments
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  View registered employees, inspect operational roles, reassign departments, or remove staff accounts.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" icon={FiRefreshCw} onClick={fetchEmployees} isLoading={employeesLoading}>
+                Refresh Roster
+              </Button>
+            </div>
+
+            {employeesLoading ? (
+              <div className="p-12 text-center space-y-3">
+                <Spinner size="lg" className="text-coral-500" />
+                <p className="text-xs font-medium text-slate-600">Loading staff directory...</p>
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="p-12 text-center bg-slate-50 rounded-2xl border border-slate-200/60 space-y-3">
+                <p className="text-sm font-semibold text-navy-900">No staff members listed yet.</p>
+                <p className="text-xs text-slate-500">Switch to the "Onboard Staff" tab to register your first bank employee.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 uppercase font-semibold">
+                      <th className="py-3 px-4">Staff ID</th>
+                      <th className="py-3 px-4">Full Name</th>
+                      <th className="py-3 px-4">Email</th>
+                      <th className="py-3 px-4">Department</th>
+                      <th className="py-3 px-4">Designation</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {employees.map((emp) => {
+                      const empId = emp.employeeId || emp.id;
+                      return (
+                        <tr key={empId} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3.5 px-4 font-mono font-bold text-slate-400">#{empId}</td>
+                          <td className="py-3.5 px-4 font-bold text-navy-900">
+                            {[emp.firstName, emp.middleName, emp.lastName].filter(Boolean).join(' ')}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600">{emp.email || 'N/A'}</td>
+                          <td className="py-3.5 px-4">
+                            <Badge variant={emp.department || 'EMPLOYEE'}>{emp.department || 'GENERAL'}</Badge>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="font-semibold text-slate-700">{emp.designation?.replace('_', ' ') || 'OFFICER'}</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                icon={FiEdit}
+                                onClick={() => handleOpenEditAssignment(emp)}
+                              >
+                                Assignment
+                              </Button>
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                icon={FiTrash2}
+                                onClick={() => handleDeleteEmployee(emp)}
+                                isLoading={isDeletingEmpId === empId}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: Register Employee Form */}
+        {activeTab === 'register-employee' && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-md">
             <div className="flex items-center justify-between pb-6 border-b border-slate-100 mb-6">
               <div>
                 <h2 className="text-xl font-bold text-navy-900 flex items-center gap-2">
-                  <FiUserPlus className="text-coral-500" /> Add New Bank Employee
+                  <FiUserPlus className="text-coral-500" /> Onboard Bank Employee
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Register an employee account. Role is locked to <span className="font-semibold text-slate-700">EMPLOYEE</span>.
+                  Create an employee credential and assign their operational branch department and designation.
                 </p>
               </div>
               <Badge variant="EMPLOYEE">Role Locked: EMPLOYEE</Badge>
             </div>
 
-            <form onSubmit={handleSubmitEmp(onAddEmployeeSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmitEmp(onAddEmployeeSubmit)} className="space-y-6 max-w-2xl">
+              {/* Personal Details */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input label="First Name" placeholder="Jane" error={errorsEmp.firstName} {...registerEmp('firstName')} />
-                <Input label="Middle Name" placeholder="R." error={errorsEmp.middleName} {...registerEmp('middleName')} />
+                <Input label="Middle Name (Optional)" placeholder="R." error={errorsEmp.middleName} {...registerEmp('middleName')} />
                 <Input label="Last Name" placeholder="Smith" error={errorsEmp.lastName} {...registerEmp('lastName')} />
               </div>
 
+              {/* Account Credentials */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Work Email" type="email" placeholder="jane.smith@finixbank.com" icon={FiMail} error={errorsEmp.email} {...registerEmp('email')} />
-                <Input label="Initial Password" type="password" placeholder="••••••••" icon={FiLock} error={errorsEmp.password} {...registerEmp('password')} />
+                <div>
+                  <Input label="Initial Password" type="password" placeholder="••••••••" icon={FiLock} error={errorsEmp.password} {...registerEmp('password')} />
+                  <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                    <FiInfo className="text-slate-400 shrink-0" />
+                    5-20 chars: min 1 digit, 1 lowercase letter, 1 special symbol (#, @, $, *)
+                  </p>
+                </div>
               </div>
 
+              {/* Department & Designation Assignment */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Mobile Number" type="tel" placeholder="9876543210" icon={FiPhone} error={errorsEmp.mobile} {...registerEmp('mobile')} />
-                <Input label="Date of Birth" type="date" icon={FiCalendar} error={errorsEmp.dob} {...registerEmp('dob')} />
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Assigned Department
+                  </label>
+                  <select
+                    {...registerEmp('department')}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+                  >
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <Input label="Residential Address" placeholder="Address lines" icon={FiMapPin} error={errorsEmp.address} {...registerEmp('address')} />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Aadhaar Number (12 Digits)" placeholder="123456789012" error={errorsEmp.aadharNum} {...registerEmp('aadharNum')} />
-                <Input label="PAN Card Number" placeholder="ABCDE1234F" className="uppercase" error={errorsEmp.panNum} {...registerEmp('panNum')} />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Official Designation
+                  </label>
+                  <select
+                    {...registerEmp('designation')}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+                  >
+                    {DESIGNATIONS.map((des) => (
+                      <option key={des} value={des}>
+                        {des.replace('_', ' ')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end pt-4 border-t border-slate-100">
@@ -373,6 +594,59 @@ const ManagerDashboard = () => {
           </div>
         )}
       </main>
+
+      {/* Edit Assignment Modal */}
+      <Modal
+        isOpen={assignmentModalOpen}
+        onClose={() => setAssignmentModalOpen(false)}
+        title={`Update Assignment — ${selectedEmployee?.firstName || ''} ${selectedEmployee?.lastName || ''}`}
+        subtitle={`Staff ID #${selectedEmployee?.employeeId || selectedEmployee?.id}`}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+              Department
+            </label>
+            <select
+              value={editDept}
+              onChange={(e) => setEditDept(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+            >
+              {DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+              Designation
+            </label>
+            <select
+              value={editDesig}
+              onChange={(e) => setEditDesig(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+            >
+              {DESIGNATIONS.map((des) => (
+                <option key={des} value={des}>
+                  {des.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setAssignmentModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleSaveAssignment} isLoading={isUpdatingAssignment} icon={FiCheck}>
+              Save Assignment
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Loan Type Add/Edit Modal */}
       <Modal

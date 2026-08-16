@@ -40,9 +40,9 @@ spring:
     name: BANKING-SERVICE
 
   datasource:
-    url: jdbc:mysql://localhost:3306/bank
+    url: jdbc:mysql://localhost:3306/finix
     username: root
-    password: "Pass@123"
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
