@@ -1,21 +1,9 @@
 package com.finix.card.dto;
 
 import java.time.LocalDateTime;
-
-import org.hibernate.annotations.CurrentTimestamp;
-
-import com.finix.account.entity.Account;
 import com.finix.account.entity.AccountType;
 import com.finix.card.entity.CardType;
 import com.finix.card.entity.Status;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,11 +19,21 @@ public class CardRequestDTO_GetCard {
   
     private String cardHolderName;
 
-    private String cardNum;
+    private String cardNum; // Masked e.g. "•••• •••• •••• 1234"
 
     private CardType cardType;
+
+    private AccountType accountType;
+
+    private String accountNumber;
+
+    private Long customerId;
+
+    private LocalDateTime issueDate;
 
     private LocalDateTime expiryDate;
 
     private Status status;
+
+    private String cvv; // "•••"
 }

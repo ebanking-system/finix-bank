@@ -82,6 +82,26 @@ public class LoanController {
         return loanService.payEmi(repaymentId, request);
     }
     
+    // To get all loans across all statuses by Employees/Managers
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllLoans() {
+        return loanService.getAllLoans();
+    }
+
+    // To get loans filtered by status by Employees/Managers
+    @GetMapping("/status/{status}")
+    public ResponseEntity<?> getLoansByStatus(@PathVariable com.finix.loan.entity.LoanStatus status) {
+        return loanService.getLoansByStatus(status);
+    }
+
+    // To update loan application parameters by Employees/Managers
+    @PutMapping("/{loanId}")
+    public ResponseEntity<?> updateLoan(
+            @PathVariable Long loanId,
+            @Valid @RequestBody com.finix.loan.dto.LoanUpdateRequestDto request) {
+        return loanService.updateLoan(loanId, request);
+    }
+
     @GetMapping("/defaulted")
     public ResponseEntity<?> getDefaultedLoans() {
 

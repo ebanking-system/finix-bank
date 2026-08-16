@@ -98,10 +98,14 @@ const FinixBotWidget = () => {
 
       setMessages((prev) => [...prev, botMsg]);
     } catch (error) {
+      console.error('FinixBot chat error:', error);
+      const detail = error.response?.data?.detail || error.response?.data?.message;
       const errorMsg = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
-        text: "I'm having trouble connecting to FinixBot AI service right now. Please ensure `finixbot-service` is running on port 8000.",
+        text: detail
+          ? `FinixBot error: ${detail}`
+          : "I'm having trouble connecting to FinixBot AI service right now. Please ensure `finixbot-service` is running on port 8000.",
         citations: [],
         source: 'error',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

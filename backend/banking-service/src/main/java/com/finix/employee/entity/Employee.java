@@ -44,4 +44,7 @@ public class Employee {
     @Enumerated(EnumType.STRING)
     @Column(name = "designation", nullable = false)
     private Designation designation;
+
+    @Column(name = "profile_photo_path", length = 255)
+    private String profilePhotoPath;
 }

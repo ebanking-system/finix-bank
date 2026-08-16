@@ -9,19 +9,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.finix.auth.dto.ApiResponse;
 import com.finix.auth.dto.JwtDTO;
-import com.finix.auth.entity.Role;
 import com.finix.auth.entity.User;
 import com.finix.auth.repository.UserRepository;
+import com.finix.common.exception.BusinessException;
 import com.finix.common.exception.ResourceNotFoundException;
-import com.finix.employee.dto.EmployeeRegistrationDto;
+import com.finix.employee.dto.EmployeeChangePasswordRequest;
 import com.finix.employee.dto.EmployeeResponse;
 import com.finix.employee.dto.UpdateEmployeeAssignmentRequest;
 import com.finix.employee.dto.UpdateEmployeeRequest;
 import com.finix.employee.entity.Employee;
 import com.finix.employee.repository.EmployeeRepository;
+import com.finix.util.FileStorageUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,66 +36,116 @@ public class EmployeeServiceImpl implements EmployeeService {
 	private final UserRepository userRepository;
 	private final ModelMapper mapper;
 	private final PasswordEncoder encoder;
-
-//	@Override
-//	public ApiResponse registerEmployee(EmployeeRegistrationDto request) {
-//
-//		if (userRepository.existsByEmail(request.getEmail())) {
-//			return new ApiResponse("Failure", "Account Already Exist");
-//		}
-//
-//		try {
-//			User user = mapper.map(request, User.class);
-//			user.setRole(Role.EMPLOYEE);
-//			user.setPasswordHash(encoder.encode(request.getPasswordHash()));
-//			userRepository.save(user);
-//
-//			Employee employee = mapper.map(request, Employee.class);
-//			employee.setUser(user);
-//			employeeRepository.save(employee);
-//
-//		} catch (Exception ex) {
-//			return new ApiResponse("Failure", ex.getMessage());
-//		}
-//
-//		return new ApiResponse("Success", "Employee Created Successfully");
-//	}
+	private final FileStorageUtil fileStorageUtil;
 
 	@Override
 	public ApiResponse getMyProfile() {
-
-		Authentication authentication =
-				SecurityContextHolder.getContext().getAuthentication();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !(authentication.getPrincipal() instanceof JwtDTO)) {
+			throw new BusinessException("User is unauthenticated.");
+		}
 
 		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
-
 		Employee employee = employeeRepository.findById(jwt.getUserId())
-				.orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Employee profile not found."));
 
 		return new ApiResponse("success", mapToResponse(employee));
 	}
 
 	@Override
 	public ApiResponse updateMyProfile(UpdateEmployeeRequest request) {
+		if (request == null || request.getFirstName() == null || request.getFirstName().isBlank()) {
+			throw new BusinessException("First name is mandatory.");
+		}
 
-		Authentication authentication =
-				SecurityContextHolder.getContext().getAuthentication();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !(authentication.getPrincipal() instanceof JwtDTO)) {
+			throw new BusinessException("User is unauthenticated.");
+		}
 
 		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
-
 		Employee employee = employeeRepository.findById(jwt.getUserId())
-				.orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Employee profile not found."));
 
-		employee.setFirstName(request.getFirstName());
-		employee.setMiddleName(request.getMiddleName());
-		employee.setLastName(request.getLastName());
+		employee.setFirstName(request.getFirstName().trim());
+		employee.setMiddleName(request.getMiddleName() != null ? request.getMiddleName().trim() : null);
+		employee.setLastName(request.getLastName() != null ? request.getLastName().trim() : null);
+
+		employeeRepository.save(employee);
+		return new ApiResponse("success", mapToResponse(employee));
+	}
+
+	@Override
+	public ApiResponse uploadProfilePhoto(MultipartFile file) {
+		if (file == null || file.isEmpty()) {
+			throw new BusinessException("Please select a valid image file.");
+		}
+
+		String contentType = file.getContentType();
+		if (contentType == null || (!contentType.startsWith("image/"))) {
+			throw new BusinessException("Profile photo must be an image (JPEG, PNG, WEBP).");
+		}
+
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !(authentication.getPrincipal() instanceof JwtDTO)) {
+			throw new BusinessException("User is unauthenticated.");
+		}
+
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+		Employee employee = employeeRepository.findById(jwt.getUserId())
+				.orElseThrow(() -> new ResourceNotFoundException("Employee profile not found."));
+
+		String savedPath = fileStorageUtil.saveEmployeePhoto(file, employee.getEmployeeId());
+		employee.setProfilePhotoPath(savedPath);
+		employeeRepository.save(employee);
 
 		return new ApiResponse("success", mapToResponse(employee));
 	}
 
 	@Override
-	public ApiResponse getAllEmployees() {
+	public ApiResponse changePassword(EmployeeChangePasswordRequest request) {
+		if (request == null) {
+			throw new BusinessException("Password change details are required.");
+		}
 
+		if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+			throw new BusinessException("Current password is required.");
+		}
+
+		if (request.getNewPassword() == null || request.getNewPassword().isBlank()) {
+			throw new BusinessException("New password is required.");
+		}
+
+		if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+			throw new BusinessException("New password and confirm password do not match.");
+		}
+
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !(authentication.getPrincipal() instanceof JwtDTO)) {
+			throw new BusinessException("User is unauthenticated.");
+		}
+
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+		User user = userRepository.findById(jwt.getUserId())
+				.orElseThrow(() -> new ResourceNotFoundException("User record not found."));
+
+		if (!encoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+			throw new BusinessException("Current password entered is incorrect.");
+		}
+
+		if (encoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+			throw new BusinessException("New password cannot be identical to the current password.");
+		}
+
+		user.setPasswordHash(encoder.encode(request.getNewPassword()));
+		user.setMustChangePassword(false);
+		userRepository.save(user);
+
+		return new ApiResponse("success", "Password updated successfully.");
+	}
+
+	@Override
+	public ApiResponse getAllEmployees() {
 		List<EmployeeResponse> response = employeeRepository.findAll()
 				.stream()
 				.map(this::mapToResponse)
@@ -104,7 +156,6 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 	@Override
 	public ApiResponse getEmployeeById(Long employeeId) {
-
 		Employee employee = employeeRepository.findById(employeeId)
 				.orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
@@ -113,7 +164,6 @@ public class EmployeeServiceImpl implements EmployeeService {
 
 	@Override
 	public ApiResponse updateEmployeeAssignment(Long employeeId, UpdateEmployeeAssignmentRequest request) {
-
 		Employee employee = employeeRepository.findById(employeeId)
 				.orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
@@ -138,11 +188,12 @@ public class EmployeeServiceImpl implements EmployeeService {
 	}
 
 	private EmployeeResponse mapToResponse(Employee employee) {
-
 		EmployeeResponse response = mapper.map(employee, EmployeeResponse.class);
 		response.setEmployeeId(employee.getEmployeeId());
-		response.setEmail(employee.getUser().getEmail());
-
+		if (employee.getUser() != null) {
+			response.setEmail(employee.getUser().getEmail());
+		}
+		response.setProfilePhotoPath(employee.getProfilePhotoPath());
 		return response;
 	}
 

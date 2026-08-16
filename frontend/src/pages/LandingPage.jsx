@@ -71,11 +71,11 @@ const LandingPage = () => {
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-coral-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12 xl:px-16 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center">
             
             {/* Left Content Column */}
-            <div className="lg:col-span-7 space-y-8 text-left">
+            <div className="lg:col-span-7 xl:col-span-7 space-y-8 text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy-800/80 border border-navy-700 text-coral-400 text-xs font-semibold uppercase tracking-wider">
                 <FiZap className="w-4 h-4 text-coral-400" />
                 <span>Next-Generation Digital Banking</span>
@@ -89,7 +89,7 @@ const LandingPage = () => {
                 </span>
               </h1>
 
-              <p className="text-lg text-slate-300 max-w-xl font-normal leading-relaxed">
+              <p className="text-lg text-slate-300 max-w-2xl font-normal leading-relaxed">
                 Open a full-featured zero-balance digital savings account in under 3 minutes. Built with bank-grade security and instant 24/7 transfers.
               </p>
 
@@ -196,7 +196,7 @@ const LandingPage = () => {
 
       {/* Features Grid Section */}
       <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
             <h2 className="text-xs font-bold text-coral-500 uppercase tracking-widest">Designed For Modern Life</h2>
             <p className="text-3xl font-extrabold text-navy-900 sm:text-4xl">
@@ -248,7 +248,7 @@ const LandingPage = () => {
 
       {/* Security CTA Banner */}
       <section id="security" className="py-16 bg-navy-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+        <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12 xl:px-16 text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-navy-800 text-coral-400 mx-auto flex items-center justify-center border border-navy-700">
             <FiShield className="w-8 h-8" />
           </div>

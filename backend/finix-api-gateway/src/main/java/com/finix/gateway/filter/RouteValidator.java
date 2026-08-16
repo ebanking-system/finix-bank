@@ -20,6 +20,8 @@ public class RouteValidator {
 
             "/api/auth/signin",
             "/api/auth/signup",
+            "/api/employees/signup",
+            "/api/kyc/files",
 
             "/swagger-ui",
 

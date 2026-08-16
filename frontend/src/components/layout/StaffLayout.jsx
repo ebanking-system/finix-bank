@@ -28,6 +28,7 @@ const StaffLayout = ({ children, title, subtitle }) => {
 
   const navItems = [
     { label: 'Operations Desk', path: userRole === 'MANAGER' ? '/manager/dashboard' : '/employee/dashboard', icon: FiBriefcase },
+    { label: 'My Profile', path: '/employee/profile', icon: FiUserCheck },
   ];
 
   return (

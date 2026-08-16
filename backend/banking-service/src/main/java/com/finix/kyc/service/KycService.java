@@ -18,4 +18,8 @@ public interface KycService {
 
 	ResponseEntity<?> getKycByStatus(Status status);
 
+	ResponseEntity<?> getMyKyc();
+
+	ResponseEntity<?> getAllKyc();
+
 }

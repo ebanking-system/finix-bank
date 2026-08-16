@@ -11,4 +11,5 @@ public interface FixedDepositService {
 
 	ResponseEntity<?> getFDDetails(AccountType accountType);
 
+	ResponseEntity<?> getAllFDs();
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -104,6 +104,19 @@ const CustTransactions = () => {
       setLoading(false);
     }
   };
+
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.toAccount) {
+      setActiveTab('transfer');
+      reset((prev) => ({
+        ...prev,
+        toAccount: location.state.toAccount,
+        remarks: location.state.beneficiaryName ? `Transfer to ${location.state.beneficiaryName}` : 'Fund Transfer',
+      }));
+    }
+  }, [location.state, reset]);
 
   useEffect(() => {
     checkActiveAccounts();

@@ -48,13 +48,13 @@ public class CustomJwtVerificationFilter extends OncePerRequestFilter {
 				 * & userRole - credentials - null - List.of(SimpleGrantedAuthority(role)
 				 * 
 				 */
-				// 4. Extract the claims - user id & role & add them in dto
-				Long userId = claims.get("user_id", Long.class);
+				Object userIdObj = claims.get("user_id");
+				Long userId = userIdObj instanceof Number ? ((Number) userIdObj).longValue() : null;
 				String userRole = claims.get("user_role", String.class);
-				String email=claims.getSubject();
-				JwtDTO dto = new JwtDTO(userId, userRole,email);
+				String email = claims.getSubject();
+				JwtDTO dto = new JwtDTO(userId, userRole, email);
 				UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(dto, null,
-						List.of(new SimpleGrantedAuthority("ROLE_"+userRole)));
+						List.of(new SimpleGrantedAuthority("ROLE_" + userRole)));
 
 				
 				/*

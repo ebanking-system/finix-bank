@@ -32,5 +32,14 @@ public interface LoanService {
     //pay EMIs
     ResponseEntity<?> payEmi(Long repaymentId,PayEmiRequestDto request);
     
+    // For Employee/Manager to get all loans across all statuses
+    ResponseEntity<?> getAllLoans();
+
+    // For Employee/Manager to get loans filtered by status
+    ResponseEntity<?> getLoansByStatus(com.finix.loan.entity.LoanStatus status);
+
+    // For Employee/Manager to update loan application parameters
+    ResponseEntity<?> updateLoan(Long loanId, com.finix.loan.dto.LoanUpdateRequestDto request);
+
     ResponseEntity<?> getDefaultedLoans();
 }

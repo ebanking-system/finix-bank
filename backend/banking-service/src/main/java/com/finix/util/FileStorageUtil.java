@@ -14,75 +14,50 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class FileStorageUtil {
 
-    /*
-     * Reads the upload folder path from application.properties
-     *
-     * file.upload-dir=uploads/kyc
-     */
-    @Value("${file.upload-dir}")
+    @Value("${file.upload-dir:uploads/kyc}")
     private String uploadDir;
 
     /**
-     * Saves the uploaded file inside:
-     *
-     * uploads/kyc/customer_1/
-     *
-     * and returns the saved file path.
+     * Saves KYC documents inside uploads/kyc/customer_{id}/
      */
     public String saveFile(MultipartFile file, Long customerId) {
-
         try {
-
-            // If no file is selected
             if (file == null || file.isEmpty()) {
                 return null;
             }
 
-            /*
-             * Create customer folder if it doesn't exist.
-             *
-             * Example:
-             * uploads/kyc/customer_5
-             */
-            Path customerFolder =
-                    Paths.get(uploadDir, "customer_" + customerId);
-
+            Path customerFolder = Paths.get(uploadDir, "customer_" + customerId);
             Files.createDirectories(customerFolder);
 
-            /*
-             * Generate unique filename.
-             *
-             * Example:
-             *
-             * 89d7c34e-pan.pdf
-             */
-            String fileName =
-                    UUID.randomUUID() + "-" + file.getOriginalFilename();
+            String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
+            Path destination = customerFolder.resolve(fileName);
 
-            /*
-             * Complete destination path.
-             */
-            Path destination =
-                    customerFolder.resolve(fileName);
-
-            /*
-             * Copy uploaded file to destination.
-             */
-         // Copy uploaded file to destination
-            Files.copy(
-                    file.getInputStream(),
-                    destination,
-                    StandardCopyOption.REPLACE_EXISTING
-            );
-
-            // Return file path to store in database
+            Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
             return destination.toString().replace("\\", "/");
-
-            } catch (IOException e) {
-
-                throw new RuntimeException("Unable to save file.", e);
-            }
-
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to save file.", e);
+        }
     }
 
+    /**
+     * Saves Employee Profile Photos inside uploads/profiles/employee_{id}/
+     */
+    public String saveEmployeePhoto(MultipartFile file, Long employeeId) {
+        try {
+            if (file == null || file.isEmpty()) {
+                return null;
+            }
+
+            Path folder = Paths.get("uploads/profiles", "employee_" + employeeId);
+            Files.createDirectories(folder);
+
+            String fileName = "avatar-" + UUID.randomUUID().toString().substring(0, 8) + "-" + file.getOriginalFilename();
+            Path destination = folder.resolve(fileName);
+
+            Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
+            return destination.toString().replace("\\", "/");
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to save profile photo.", e);
+        }
+    }
 }

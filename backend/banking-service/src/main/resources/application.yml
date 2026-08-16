@@ -94,3 +94,9 @@ file:
 
 notification:
   queue: notification.queue
+
+app:
+  banking:
+    account:
+      max-active-per-type: ${MAX_ACTIVE_ACCOUNTS_PER_TYPE:1}
+
