@@ -1,9 +1,6 @@
 package com.finix.security;
 
 import java.util.Date;
-
-import java.util.Map;
-
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -15,56 +12,49 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 
-@Component // declares spring bean
+@Component
 @Slf4j
 public class JwtUtils {
-	/*
-	 * value based D.I - SC SC solves SpEL & extracts its value -> variable
-	 * 
-	 */
-	@Value("${jwt.exp.time}") // SpEl - Spring expression language
+
+	@Value("${jwt.exp.time}")
 	private long expTime;
+
 	@Value("${jwt.secret.key}")
 	private String key;
+
 	private SecretKey secretKey;
 
 	@PostConstruct
 	public void myInit() {
-
 		secretKey = Keys.hmacShaKeyFor(key.getBytes());
-		log.info("****** in init ***** {} ", secretKey);
+		log.info("****** JWT SecretKey initialized: {} *****", secretKey.getAlgorithm());
 	}
 
-	/*
-	 * Add a method to generate JWT
+	/**
+	 * Generate signed JWT token with standard subject, iat, exp and custom claims.
 	 */
 	public String generateJwt(CustomUserDetailsImpl userDetails) {
 		Date createdAt = new Date();
-		Date expAt=new Date(createdAt.getTime()+expTime);
-		return Jwts.builder()  //Creates JWT builder
-				.subject(userDetails.getEmail()) //setting subject - claim
-				.issuedAt(createdAt) //iat - claim
-				.expiration(expAt) //exp - claim
-				.claims(Map.of("user_id", userDetails.getUserId(),//for adding uid -> for extra validation
-						"user_role", userDetails.getRole().name())) //to avois select query per request to get role
+		Date expAt = new Date(createdAt.getTime() + expTime);
+
+		return Jwts.builder()
+				.subject(userDetails.getEmail())
+				.issuedAt(createdAt)
+				.expiration(expAt)
+				.claim("user_id", userDetails.getUserId())
+				.claim("user_role", userDetails.getRole().name())
 				.signWith(secretKey)
-				.compact();//Jackson serializes the signed JWT & rets to the caller
-
+				.compact();
 	}
-	/*
-	 * Add a method 
-	 * - to verify JWT
-	 * - return the payload (Claims - object)
+
+	/**
+	 * Verify JWT signature and parse claims payload.
 	 */
-	public Claims verifyJwt(String jwt)
-	{
-		
-		return Jwts.parser() //creates a parser to parse the token
-				.verifyWith(secretKey) //using same secret key for verification
-				.build() //builds JWT parser object
-				.parseSignedClaims(jwt) //validating - jwt structure , exp time , tampering
-				//=> valid JWT 
-				.getPayload(); //extract the claims
+	public Claims verifyJwt(String jwt) {
+		return Jwts.parser()
+				.verifyWith(secretKey)
+				.build()
+				.parseSignedClaims(jwt)
+				.getPayload();
 	}
-
 }

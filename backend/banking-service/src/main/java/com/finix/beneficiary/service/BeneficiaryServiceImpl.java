@@ -1,7 +1,6 @@
 package com.finix.beneficiary.service;
 
 import java.util.ArrayList;
-
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
@@ -37,7 +36,6 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
 	private final AccountRepository accountRepository;
 	private final ModelMapper modelMapper;
 
-   
 	@Override
 	public ResponseEntity<?> addBeneficiary(BeneficiaryDTO dto) {
 		
@@ -53,49 +51,16 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
 		}
 		Beneficiary entity=modelMapper.map(dto,Beneficiary.class);
 		entity.setCustomer(customer);
-		// TODO Auto-generated method stub
 		try {
 			beneficiaryRepository.save(entity);
 			return ResponseEntity.ok(new ApiResponse("success","Saved Successfully"));
 		}catch(RuntimeException ex) {
 			return ResponseEntity.badRequest().body(new ApiResponse("failure",ex.getMessage()));
 		}
-		
 	}
+
 	@Override
 	public ResponseEntity<?> deleteBeneficiary(Long id) {
-		// TODO Auto-generated method stub
-		try {
-			beneficiaryRepository.deleteById(id);
-		}catch(RuntimeException ex) {
-			return ResponseEntity.badRequest().body("ERROR : "+ex.getMessage());
-		}
-		return ResponseEntity.noContent().build();
-	}
-	@Override
-	public ResponseEntity<?> getAllBeneficiaries() {
-		// TODO Auto-generated method stub
-		List<Beneficiary> resultList= beneficiaryRepository.findAll();
-		System.out.print("Beneficiary");
-		for(Beneficiary b:resultList) {
-			System.out.println(b);
-		}
-		List<BeneficiaryDTO> resp=new ArrayList<>();
-		
-		resultList.stream().map(b->resp.add(modelMapper.map(b,BeneficiaryDTO.class))).toList();
-		
-		System.out.print("BeneficiaryDTO");
-		for(BeneficiaryDTO b:resp) {
-			System.out.println(b);
-		}
-		if(resp.isEmpty()) {
-			return ResponseEntity.noContent().build();
-		}
-		return ResponseEntity.ok(new ApiResponse("succuss",resp));
-	}
-	@Override
-	public ResponseEntity<?> updateBeneficiary(Long id,String name) {
-		// TODO Auto-generated method stub
 		Authentication authentication =
     	        SecurityContextHolder.getContext().getAuthentication();
     	
@@ -103,15 +68,59 @@ public class BeneficiaryServiceImpl implements BeneficiaryService {
         		(JwtDTO) authentication.getPrincipal();
 
     	Customer customer = customerRepository.findById(jwt.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
-		Beneficiary entity = beneficiaryRepository.findById(id).orElseThrow();
+		Beneficiary entity = beneficiaryRepository.findById(id).orElseThrow(() -> new RuntimeException("Beneficiary not found"));
+		
+		if(!customer.getCustomerId().equals(entity.getCustomer().getCustomerId())) {
+			return ResponseEntity.badRequest().body(new ApiResponse("failure","Unauthorized to delete this beneficiary"));
+		}
+
+		try {
+			beneficiaryRepository.deleteById(id);
+		}catch(RuntimeException ex) {
+			return ResponseEntity.badRequest().body("ERROR : "+ex.getMessage());
+		}
+		return ResponseEntity.noContent().build();
+	}
+
+	@Override
+	public ResponseEntity<?> getAllBeneficiaries() {
+		Authentication authentication =
+    	        SecurityContextHolder.getContext().getAuthentication();
+    	
+    	JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
+
+    	Customer customer = customerRepository.findById(jwt.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
+		List<Beneficiary> resultList = beneficiaryRepository.findByCustomer(customer);
+
+		List<BeneficiaryDTO> resp = new ArrayList<>();
+		for(Beneficiary b : resultList) {
+			BeneficiaryDTO dto = modelMapper.map(b, BeneficiaryDTO.class);
+			dto.setBeneficiaryId(b.getBeneficiaryId());
+			resp.add(dto);
+		}
+		
+		if(resp.isEmpty()) {
+			return ResponseEntity.noContent().build();
+		}
+		return ResponseEntity.ok(new ApiResponse("success", resp));
+	}
+
+	@Override
+	public ResponseEntity<?> updateBeneficiary(Long id,String name) {
+		Authentication authentication =
+    	        SecurityContextHolder.getContext().getAuthentication();
+    	
+    	JwtDTO jwt =
+        		(JwtDTO) authentication.getPrincipal();
+
+    	Customer customer = customerRepository.findById(jwt.getUserId()).orElseThrow(()->new RuntimeException("Customer not found"));
+		Beneficiary entity = beneficiaryRepository.findById(id).orElseThrow(() -> new RuntimeException("Beneficiary not found"));
+		
 		if(!customer.getCustomerId().equals(entity.getCustomer().getCustomerId())) {
 			return ResponseEntity.badRequest().body(new ApiResponse("failure","Beneficiary not found"));
 		}
-		if(entity ==null) {
-			return ResponseEntity.badRequest().body(new ApiResponse("failure","Beneficiary not found"));
-		}
 		entity.setBeneficiaryName(name);
-		return ResponseEntity.ok(new ApiResponse("succuss","Updation Successfull..!"));
+		return ResponseEntity.ok(new ApiResponse("success","Updation Successful..!"));
 	}
-	
 }

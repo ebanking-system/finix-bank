@@ -123,6 +123,20 @@ public class EmployeeServiceImpl implements EmployeeService {
 		return new ApiResponse("success", mapToResponse(employee));
 	}
 
+	@Override
+	public ApiResponse deleteEmployee(Long employeeId) {
+		Employee employee = employeeRepository.findById(employeeId)
+				.orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+		User user = employee.getUser();
+		employeeRepository.delete(employee);
+		if (user != null) {
+			userRepository.delete(user);
+		}
+
+		return new ApiResponse("success", "Employee deleted successfully");
+	}
+
 	private EmployeeResponse mapToResponse(Employee employee) {
 
 		EmployeeResponse response = mapper.map(employee, EmployeeResponse.class);

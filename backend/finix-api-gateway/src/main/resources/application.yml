@@ -48,25 +48,25 @@ spring:
             - id: employee-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/employee/**
+                - Path=/api/employees, /api/employees/**, /api/employee/**
 
-            # Loan APIs
+            # Loan & Loan Types APIs
             - id: loan-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/loans/**
+                - Path=/api/loans/**, /api/loan-types/**
 
             # Card APIs
             - id: card-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/card/**
+                - Path=/api/cards/**, /api/card/**
 
             # Fixed Deposit APIs
             - id: fd-service
               uri: lb://BANKING-SERVICE
               predicates:
-                - Path=/api/cards/**
+                - Path=/api/fd/**
 
             # KYC APIs
             - id: kyc-service

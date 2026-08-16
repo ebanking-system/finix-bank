@@ -19,4 +19,6 @@ public interface EmployeeService {
 
 	ApiResponse updateEmployeeAssignment(Long employeeId, UpdateEmployeeAssignmentRequest request);
 
+	ApiResponse deleteEmployee(Long employeeId);
+
 }

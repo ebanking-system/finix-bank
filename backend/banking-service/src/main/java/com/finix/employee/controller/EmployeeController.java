@@ -1,6 +1,7 @@
 package com.finix.employee.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,6 +59,11 @@ public class EmployeeController {
 			@PathVariable Long employeeId,
 			@Valid @RequestBody UpdateEmployeeAssignmentRequest request) {
 		return ResponseEntity.ok(employeeService.updateEmployeeAssignment(employeeId, request));
+	}
+
+	@DeleteMapping("/{employeeId}")
+	public ResponseEntity<ApiResponse> deleteEmployee(@PathVariable Long employeeId) {
+		return ResponseEntity.ok(employeeService.deleteEmployee(employeeId));
 	}
 
 }

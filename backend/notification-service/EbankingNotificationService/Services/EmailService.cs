@@ -1,4 +1,4 @@
-﻿using MailKit.Net.Smtp;
+using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
 
@@ -18,11 +18,19 @@ namespace EbankingNotificationService.Services
             string subject,
             string message)
         {
+            var senderEmail = _configuration["EmailSettings:SenderEmail"];
+            var appPassword = _configuration["EmailSettings:AppPassword"];
+
+            if (string.IsNullOrWhiteSpace(senderEmail) || string.IsNullOrWhiteSpace(appPassword))
+            {
+                Console.WriteLine($"[EmailService] SMTP credentials not configured. Skipping email dispatch to {toEmail}.");
+                return;
+            }
+
             var email = new MimeMessage();
 
             email.From.Add(
-                MailboxAddress.Parse(
-                    _configuration["EmailSettings:SenderEmail"]));
+                MailboxAddress.Parse(senderEmail));
 
             email.To.Add(MailboxAddress.Parse(toEmail));
 
@@ -63,8 +71,8 @@ namespace EbankingNotificationService.Services
                 SecureSocketOptions.StartTls);
 
             await smtp.AuthenticateAsync(
-                _configuration["EmailSettings:SenderEmail"],
-                _configuration["EmailSettings:AppPassword"]);
+                senderEmail,
+                appPassword);
 
             await smtp.SendAsync(email);
 

@@ -3,16 +3,12 @@ import api from './api';
 export const accountService = {
   /**
    * Open a new bank account (SAVINGS or CURRENT)
-   * Note: Backend expects a raw JSON string of the enum (e.g. '"SAVINGS"'), NOT an object.
+   * Sends { accountType } JSON object matching CreateAccountRequest DTO.
    * @param {'SAVINGS'|'CURRENT'} accountType
    * @returns {Promise<{ status: number, data: any }>}
    */
   async openAccount(accountType) {
-    const response = await api.post('/api/accounts', JSON.stringify(accountType), {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await api.post('/api/accounts', { accountType });
     return response;
   },
 
@@ -51,6 +47,6 @@ export const accountService = {
     const response = await api.get(`/api/accounts/balance`, {
       params: { accountType },
     });
-    return response.data; // Raw BigDecimal string or number
+    return response.data;
   },
 };

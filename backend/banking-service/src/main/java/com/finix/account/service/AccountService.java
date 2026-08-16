@@ -14,6 +14,8 @@ public interface AccountService {
 
     AccountResponse createAccount(AccountType accType , Customer customer);
 
+    AccountResponse openAccountForCurrentCustomer(CreateAccountRequest request);
+
     ApiResponse getAccountById(Long accountId);
 
     ApiResponse getAccountByNumber(String accountNumber);

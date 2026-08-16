@@ -2,8 +2,6 @@ package com.finix.kyc.dto;
 
 import java.time.LocalDateTime;
 
-
-import com.finix.customer.entity.Customer;
 import com.finix.kyc.entity.Status;
 
 import lombok.AllArgsConstructor;
@@ -26,6 +24,12 @@ public class KycDocumentDto3 {
 	private String panNum;
 	
 	private String selfImage;
+
+	private String aadharFile;
+
+	private String panFile;
+
+	private String selfieFile;
 	
 	private Status status;
 	
