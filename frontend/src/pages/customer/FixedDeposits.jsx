@@ -12,8 +12,11 @@ import {
   FiRefreshCw,
   FiCalendar,
   FiPercent,
+  FiAlertCircle,
+  FiInfo,
 } from 'react-icons/fi';
 import { fdService } from '../../services/fdService';
+import { accountService } from '../../services/accountService';
 import CustomerLayout from '../../components/layout/CustomerLayout';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
@@ -30,11 +33,11 @@ const fdSchema = yup.object().shape({
 });
 
 const tenureOptions = [
-  { value: 'ONE_YEAR', label: '1 Year (6.5% p.a.)', rate: 6.5 },
-  { value: 'TWO_YEARS', label: '2 Years (6.8% p.a.)', rate: 6.8 },
-  { value: 'THREE_YEARS', label: '3 Years (7.0% p.a.)', rate: 7.0 },
-  { value: 'FOUR_YEARS', label: '4 Years (7.2% p.a.)', rate: 7.2 },
-  { value: 'FIVE_YEARS', label: '5 Years (7.5% p.a.)', rate: 7.5 },
+  { value: 'ONE_YEAR', label: '1 Year (6.5% p.a.)', rate: 6.5, years: 1 },
+  { value: 'TWO_YEARS', label: '2 Years (6.8% p.a.)', rate: 6.8, years: 2 },
+  { value: 'THREE_YEARS', label: '3 Years (7.0% p.a.)', rate: 7.0, years: 3 },
+  { value: 'FOUR_YEARS', label: '4 Years (7.2% p.a.)', rate: 7.2, years: 4 },
+  { value: 'FIVE_YEARS', label: '5 Years (7.5% p.a.)', rate: 7.5, years: 5 },
 ];
 
 const FixedDeposits = () => {
@@ -44,10 +47,13 @@ const FixedDeposits = () => {
 
   const [fdList, setFdList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [availableBalance, setAvailableBalance] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     reset,
     formState: { errors },
   } = useForm({
@@ -56,6 +62,20 @@ const FixedDeposits = () => {
       depositAmount: 25000,
     },
   });
+
+  const watchedAmount = watch('depositAmount') || 0;
+
+  const fetchBalance = async (accType) => {
+    setBalanceLoading(true);
+    try {
+      const bal = await accountService.getAccountBalance(accType);
+      setAvailableBalance(Number(bal || 0));
+    } catch (err) {
+      setAvailableBalance(null);
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
 
   const fetchFixedDeposits = async (accType) => {
     setLoading(true);
@@ -71,7 +91,13 @@ const FixedDeposits = () => {
 
   useEffect(() => {
     fetchFixedDeposits(accountType);
+    fetchBalance(accountType);
   }, [accountType]);
+
+  const selectedTenureObj = tenureOptions.find((t) => t.value === tenureYears) || tenureOptions[0];
+  const numAmount = Number(watchedAmount) || 0;
+  const estimatedInterest = numAmount > 0 ? (numAmount * selectedTenureObj.rate * selectedTenureObj.years) / 100 : 0;
+  const estimatedMaturity = numAmount + estimatedInterest;
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
@@ -84,9 +110,11 @@ const FixedDeposits = () => {
       toast.success('Fixed Deposit created successfully!');
       reset();
       fetchFixedDeposits(accountType);
+      fetchBalance(accountType);
     } catch (error) {
       const msg =
         error.response?.data?.message ||
+        error.response?.data?.data ||
         (typeof error.response?.data === 'string' ? error.response.data : null) ||
         'Failed to create Fixed Deposit. Ensure sufficient account balance.';
       toast.error(msg);
@@ -110,9 +138,19 @@ const FixedDeposits = () => {
             >
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                    Source Account
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      Source Account
+                    </label>
+                    {availableBalance !== null && (
+                      <span className="text-xs font-semibold text-slate-500">
+                        Available Balance:{' '}
+                        <span className="font-bold text-navy-900">
+                          ₹{availableBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -165,6 +203,28 @@ const FixedDeposits = () => {
                   </select>
                 </div>
 
+                {/* Real-time Returns Calculator Preview */}
+                {numAmount >= 1000 && (
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Interest Rate:</span>
+                      <span className="font-bold text-coral-600">{selectedTenureObj.rate}% p.a.</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Estimated Interest Earned:</span>
+                      <span className="font-bold text-emerald-600">
+                        +₹{estimatedInterest.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200">
+                      <span className="font-semibold text-slate-700">Total Maturity Value:</span>
+                      <span className="font-extrabold text-navy-900 text-sm">
+                        ₹{estimatedMaturity.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                   <Button
                     type="submit"
@@ -196,6 +256,9 @@ const FixedDeposits = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <FiClock className="text-emerald-400 shrink-0" /> Instant booking debited from active account
+                </li>
+                <li className="flex items-center gap-2">
+                  <FiTrendingUp className="text-emerald-400 shrink-0" /> Compounded simple interest on maturity
                 </li>
               </ul>
             </div>
@@ -238,12 +301,12 @@ const FixedDeposits = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {fdList.map((fd, index) => {
-                const fdId = fd.id || index;
+                const fdId = fd.fdId || fd.id || (index + 1);
                 return (
                   <Card
                     key={fdId}
                     title={`Fixed Deposit #${fdId}`}
-                    subtitle={`Rate: ${fd.interestRate}% p.a.`}
+                    subtitle={`Rate: ${fd.interestRate ? `${fd.interestRate}% p.a.` : 'Guaranteed'}`}
                     action={<Badge variant={fd.status || 'ACTIVE'}>{fd.status || 'ACTIVE'}</Badge>}
                   >
                     <div className="space-y-3 text-xs">
@@ -257,8 +320,14 @@ const FixedDeposits = () => {
                       </div>
                       <div className="flex justify-between py-1 border-b border-slate-100">
                         <span className="text-slate-500">Tenure</span>
-                        <span className="font-semibold text-slate-700">{fd.tenureYears?.replace('_', ' ') || 'N/A'}</span>
+                        <span className="font-semibold text-slate-700">{fd.tenureYears?.replace(/_/g, ' ') || 'N/A'}</span>
                       </div>
+                      {fd.startDate && (
+                        <div className="flex justify-between py-1 border-b border-slate-100">
+                          <span className="text-slate-500">Start Date</span>
+                          <span className="text-slate-700">{new Date(fd.startDate).toLocaleDateString('en-IN')}</span>
+                        </div>
+                      )}
                       {fd.maturityDate && (
                         <div className="flex justify-between py-1">
                           <span className="text-slate-500">Maturity Date</span>

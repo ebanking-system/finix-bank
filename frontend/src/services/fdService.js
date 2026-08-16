@@ -23,4 +23,13 @@ export const fdService = {
     const response = await api.get(`/api/fd/get/${accountType}`);
     return Array.isArray(response.data) ? response.data : response.data?.data || [];
   },
+
+  /**
+   * Fetch all Fixed Deposits across all customers (Staff / Management queue)
+   */
+  async getAllFDs() {
+    const response = await api.get('/api/fd/all');
+    const resData = response.data?.data || response.data;
+    return Array.isArray(resData) ? resData : [];
+  },
 };

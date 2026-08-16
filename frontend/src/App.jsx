@@ -24,6 +24,7 @@ import { Notifications } from './pages/customer/Placeholders';
 
 // Employee & Manager Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
+import EmployeeProfile from './pages/employee/EmployeeProfile';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 
 function App() {
@@ -53,11 +54,13 @@ function App() {
           {/* Employee Protected Routes */}
           <Route element={<ProtectedRoute allowedRoles={['EMPLOYEE']} />}>
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="/employee/profile" element={<EmployeeProfile />} />
           </Route>
 
           {/* Manager Protected Routes */}
           <Route element={<ProtectedRoute allowedRoles={['MANAGER']} />}>
             <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+            <Route path="/manager/profile" element={<EmployeeProfile />} />
           </Route>
 
           {/* Fallback */}

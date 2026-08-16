@@ -1,17 +1,19 @@
 package com.finix.employee.controller;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.finix.auth.dto.ApiResponse;
-import com.finix.employee.dto.EmployeeRegistrationDto;
+import com.finix.employee.dto.EmployeeChangePasswordRequest;
 import com.finix.employee.dto.UpdateEmployeeAssignmentRequest;
 import com.finix.employee.dto.UpdateEmployeeRequest;
 import com.finix.employee.service.EmployeeService;
@@ -26,12 +28,6 @@ public class EmployeeController {
 
 	private final EmployeeService employeeService;
 
-//	@PostMapping("/signup")
-//	public ResponseEntity<ApiResponse> registerEmployee(
-//			@Valid @RequestBody EmployeeRegistrationDto request) {
-//		return ResponseEntity.ok(employeeService.registerEmployee(request));
-//	}
-
 	@GetMapping("/profile")
 	public ResponseEntity<ApiResponse> getMyProfile() {
 		return ResponseEntity.ok(employeeService.getMyProfile());
@@ -41,6 +37,40 @@ public class EmployeeController {
 	public ResponseEntity<ApiResponse> updateMyProfile(
 			@Valid @RequestBody UpdateEmployeeRequest request) {
 		return ResponseEntity.ok(employeeService.updateMyProfile(request));
+	}
+
+	@PostMapping("/profile/photo")
+	public ResponseEntity<ApiResponse> uploadProfilePhoto(@RequestParam("file") MultipartFile file) {
+		return ResponseEntity.ok(employeeService.uploadProfilePhoto(file));
+	}
+
+	@PostMapping("/profile/change-password")
+	public ResponseEntity<ApiResponse> changePassword(
+			@Valid @RequestBody EmployeeChangePasswordRequest request) {
+		return ResponseEntity.ok(employeeService.changePassword(request));
+	}
+
+	@GetMapping("/photo/{employeeId}/{fileName}")
+	public ResponseEntity<Resource> getEmployeePhoto(
+			@PathVariable Long employeeId,
+			@PathVariable String fileName) {
+		try {
+			Path filePath = Paths.get("uploads", "profiles", "employee_" + employeeId, fileName);
+			if (!Files.exists(filePath)) {
+				return ResponseEntity.notFound().build();
+			}
+			Resource resource = new UrlResource(filePath.toUri());
+			String contentType = Files.probeContentType(filePath);
+			if (contentType == null) {
+				contentType = "image/jpeg";
+			}
+			return ResponseEntity.ok()
+					.contentType(MediaType.parseMediaType(contentType))
+					.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+					.body(resource);
+		} catch (Exception e) {
+			return ResponseEntity.internalServerError().build();
+		}
 	}
 
 	@GetMapping

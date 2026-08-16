@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -11,6 +12,8 @@ import {
   FiCreditCard,
   FiCheckCircle,
   FiInfo,
+  FiSend,
+  FiArrowRight,
 } from 'react-icons/fi';
 import { beneficiaryService } from '../../services/beneficiaryService';
 import CustomerLayout from '../../components/layout/CustomerLayout';
@@ -23,11 +26,20 @@ import Spinner from '../../components/common/Spinner';
 // Yup Schema for Add Beneficiary
 const addBeneficiarySchema = yup.object().shape({
   beneficiaryName: yup.string().trim().required('Beneficiary name is required'),
-  accountNumber: yup.string().trim().required('Account number is required'),
-  ifscCode: yup.string().trim().required('IFSC code is required'),
+  accountNumber: yup
+    .string()
+    .trim()
+    .matches(/^[0-9]{9,18}$/, 'Account number must be 9 to 18 digits')
+    .required('Account number is required'),
+  ifscCode: yup
+    .string()
+    .trim()
+    .min(8, 'IFSC code must be at least 8 characters')
+    .required('IFSC code is required'),
 });
 
 const Beneficiaries = () => {
+  const navigate = useNavigate();
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -55,8 +67,8 @@ const Beneficiaries = () => {
       const data = await beneficiaryService.getBeneficiaries();
       const list = Array.isArray(data)
         ? data
-        : Array.isArray(data?.beneficiaries)
-        ? data.beneficiaries
+        : Array.isArray(data?.data)
+        ? data.data
         : [];
       setBeneficiaries(list);
     } catch (error) {
@@ -73,7 +85,10 @@ const Beneficiaries = () => {
   const onAddSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const resp = await beneficiaryService.addBeneficiary(data);
+      const resp = await beneficiaryService.addBeneficiary({
+        ...data,
+        ifscCode: data.ifscCode.toUpperCase(),
+      });
       if (resp?.status === 'Failure' || resp?.status === 'failure') {
         toast.error(resp?.data || resp?.message || 'Failed to add beneficiary.');
         return;
@@ -138,6 +153,15 @@ const Beneficiaries = () => {
     }
   };
 
+  const handleQuickTransfer = (b) => {
+    navigate('/customer/transactions', {
+      state: {
+        toAccount: b.accountNumber,
+        beneficiaryName: b.beneficiaryName,
+      },
+    });
+  };
+
   return (
     <CustomerLayout
       title="Saved Beneficiaries"
@@ -147,7 +171,7 @@ const Beneficiaries = () => {
         {/* Header Control */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Registered Beneficiaries</h2>
+            <h2 className="text-lg font-bold text-navy-900">Registered Beneficiaries ({beneficiaries.length})</h2>
             <p className="text-xs text-slate-500">
               Easily manage trusted payees for IMPS/NEFT/RTGS transfers.
             </p>
@@ -219,7 +243,7 @@ const Beneficiaries = () => {
                   </div>
                 }
               >
-                <div className="space-y-2.5 text-xs">
+                <div className="space-y-3 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-500">IFSC Code</span>
                     <span className="font-mono font-bold text-navy-900">{b.ifscCode}</span>
@@ -227,6 +251,17 @@ const Beneficiaries = () => {
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-500">Account Number</span>
                     <span className="font-mono font-bold text-navy-900">{b.accountNumber}</span>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={FiSend}
+                      onClick={() => handleQuickTransfer(b)}
+                    >
+                      Transfer Money
+                    </Button>
                   </div>
                 </div>
               </Card>

@@ -121,7 +121,7 @@ const Loans = () => {
       reset();
       fetchMyLoans();
     } catch (error) {
-      const msg = error.response?.data?.message || 'Failed to submit loan application.';
+      const msg = error.response?.data?.data || error.response?.data?.message || 'Failed to submit loan application.';
       toast.error(msg);
     } finally {
       setIsSubmitting(false);

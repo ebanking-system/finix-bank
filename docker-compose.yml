@@ -252,6 +252,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL_NAME: "llama-3.1-8b-instant"
+      BANKING_SERVICE_URL: "http://api-gateway:9090"
     volumes:
       - chroma_data:/app/chroma_db
     networks:

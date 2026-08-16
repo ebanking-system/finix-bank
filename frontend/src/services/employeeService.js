@@ -53,4 +53,38 @@ export const employeeService = {
     const response = await api.patch('/api/employees/profile', data);
     return response.data?.data || response.data;
   },
+
+  /**
+   * Upload profile photo for logged-in employee
+   * @param {File} file
+   */
+  async uploadProfilePhoto(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/employees/profile/photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data?.data || response.data;
+  },
+
+  /**
+   * Change password for logged-in employee
+   * @param {Object} data - { currentPassword, newPassword, confirmPassword }
+   */
+  async changePassword(data) {
+    const response = await api.post('/api/employees/profile/change-password', data);
+    return response.data;
+  },
+
+  /**
+   * Construct URL to serve employee photo
+   * @param {number|string} employeeId
+   * @param {string} photoPath
+   */
+  getEmployeePhotoUrl(employeeId, photoPath) {
+    if (!photoPath || !employeeId) return null;
+    const fileName = photoPath.split('/').pop().split('\\').pop();
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    return `${baseUrl}/api/employees/photo/${employeeId}/${fileName}`;
+  },
 };

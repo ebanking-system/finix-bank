@@ -2,14 +2,52 @@ import api from './api';
 
 export const accountService = {
   /**
-   * Open a new bank account (SAVINGS or CURRENT)
-   * Sends { accountType } JSON object matching CreateAccountRequest DTO.
+   * Open a new bank account (SAVINGS or CURRENT) with optional initial deposit
    * @param {'SAVINGS'|'CURRENT'} accountType
+   * @param {number} [initialDeposit=0]
    * @returns {Promise<{ status: number, data: any }>}
    */
-  async openAccount(accountType) {
-    const response = await api.post('/api/accounts', { accountType });
+  async openAccount(accountType, initialDeposit = 0) {
+    const payload = {
+      accountType,
+      initialDeposit: initialDeposit > 0 ? Number(initialDeposit) : 0,
+    };
+    const response = await api.post('/api/accounts', payload);
     return response;
+  },
+
+  /**
+   * Self-service customer deposit / add funds
+   * @param {Object} data - { accountType, accountNumber, amount, paymentMethod, referenceNumber, remarks }
+   */
+  async depositSelf(data) {
+    const payload = {
+      accountType: data.accountType,
+      accountNumber: data.accountNumber,
+      amount: Number(data.amount),
+      paymentMethod: data.paymentMethod || 'UPI',
+      referenceNumber: data.referenceNumber,
+      remarks: data.remarks,
+    };
+    const response = await api.post('/api/accounts/deposit', payload);
+    return response.data;
+  },
+
+  /**
+   * Staff / Teller-assisted deposit for customer account
+   * @param {Object} data - { accountNumber, amount, depositType, referenceNumber, depositorName, remarks }
+   */
+  async depositEmployee(data) {
+    const payload = {
+      accountNumber: data.accountNumber,
+      amount: Number(data.amount),
+      depositType: data.depositType || 'CASH',
+      referenceNumber: data.referenceNumber,
+      depositorName: data.depositorName,
+      remarks: data.remarks,
+    };
+    const response = await api.post('/api/accounts/employee/deposit', payload);
+    return response.data;
   },
 
   /**

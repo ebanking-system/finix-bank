@@ -2,6 +2,14 @@ import api from './api';
 
 export const kycService = {
   /**
+   * Fetch current customer's KYC details (GET /api/kyc/my)
+   */
+  async getMyKyc() {
+    const response = await api.get('/api/kyc/my');
+    return response.data?.data || response.data;
+  },
+
+  /**
    * Customer KYC submission / resubmission (PATCH /api/kyc)
    * @param {Object} data - { aadharNum, panNum }
    */
@@ -28,6 +36,14 @@ export const kycService = {
    */
   async getKycByStatus(status = 'PENDING') {
     const response = await api.get(`/api/kyc/status/${status}`);
+    return Array.isArray(response.data) ? response.data : response.data?.data || [];
+  },
+
+  /**
+   * Fetch all KYC applications across all statuses (GET /api/kyc/all)
+   */
+  async getAllKyc() {
+    const response = await api.get('/api/kyc/all');
     return Array.isArray(response.data) ? response.data : response.data?.data || [];
   },
 

@@ -57,6 +57,33 @@ export const loanService = {
   },
 
   /**
+   * Get all loan applications across all statuses (Employee/Manager view)
+   */
+  async getAllLoans() {
+    const response = await api.get('/api/loans/all');
+    return response.data || [];
+  },
+
+  /**
+   * Get loans filtered by status (Employee/Manager view)
+   * @param {string} status - e.g. UNDER_REVIEW, APPROVED, REJECTED, ACTIVE, CLOSED, DEFAULTED
+   */
+  async getLoansByStatus(status) {
+    const response = await api.get(`/api/loans/status/${status}`);
+    return response.data || [];
+  },
+
+  /**
+   * Update loan application parameters (Employee/Manager)
+   * @param {number|string} loanId
+   * @param {Object} data - { amount, tenureMonths, loanTypeId, status, rejectionReason }
+   */
+  async updateLoan(loanId, data) {
+    const response = await api.put(`/api/loans/${loanId}`, data);
+    return response.data;
+  },
+
+  /**
    * Get repayment schedule for a loan
    * @param {number|string} loanId
    */

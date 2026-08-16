@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.finix.common.exception.AccessDeniedException;
+import com.finix.auth.service.AuditLogService;
 import com.finix.util.FileStorageUtil;
 import com.finix.kyc.dto.KycUploadRequest;
 import com.finix.account.entity.Account;
@@ -52,6 +54,7 @@ public class KycServiceImpl implements KycService {
 	private final FileStorageUtil fileStorageUtil;
 	private final ModelMapper mapper;
 	private final NotificationProducer notificationProducer;
+	private final AuditLogService auditLogService;
 
 	@Override
 	public ResponseEntity<ApiResponse> updateKyc(KycDocumentDto2 request) {
@@ -88,22 +91,34 @@ public class KycServiceImpl implements KycService {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		JwtDTO jwtDto = (JwtDTO) authentication.getPrincipal();
 
-		if (jwtDto.getRoleName().equals(Role.CUSTOMER)) {
-			return new ApiResponse("failure", "ACCESS DENIED"); 
+		boolean isManager = Role.MANAGER.name().equals(jwtDto.getRoleName());
+		if (!isManager) {
+			if (Role.CUSTOMER.name().equals(jwtDto.getRoleName())) {
+				throw new AccessDeniedException("You are not authorized to update KYC status.");
+			}
+
+			Employee emp = employeeRepository.findById(jwtDto.getUserId())
+					.orElseThrow(() -> new AccessDeniedException("Employee not found for user ID: " + jwtDto.getUserId()));
+			if (!emp.getDesignation().equals(Designation.KYC_OFFICER)) {
+				throw new AccessDeniedException("You are not authorized to perform KYC verification. Required: KYC_OFFICER or MANAGER");
+			}
 		}
 
-		Employee emp = employeeRepository.findById(jwtDto.getUserId()).orElseThrow();
-		if (!emp.getDesignation().equals(Designation.KYC_OFFICER)) {
-			return new ApiResponse("failure", "ACCESS DENIED"); 
-		}
-
-		KycDocuments kycDocumentEntity = kycDocumentRepository.findById(id).orElseThrow();
+		KycDocuments kycDocumentEntity = kycDocumentRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("KYC document not found with ID: " + id));
 
 		if (status.getStatus() == Status.APPROVED) {
 			kycDocumentEntity.setStatus(status.getStatus());
 			Account account = accountRepository.findByAccountTypeAndCustomer(status.getAccountType(), kycDocumentEntity.getCustomer());
 			if (account != null) {
 				account.setStatus(AccountStatus.ACTIVE);
+			}
+
+			if (isManager) {
+				auditLogService.logManagerOverride(
+						jwtDto.getUserId(), "APPROVE_KYC", "KYC", id,
+						"Manager approved KYC verification for customer #" + (kycDocumentEntity.getCustomer() != null ? kycDocumentEntity.getCustomer().getCustomerId() : "N/A")
+				);
 			}
 
 			// Publish KYC approval notification to RabbitMQ
@@ -126,6 +141,13 @@ public class KycServiceImpl implements KycService {
 			return new ApiResponse("success", "status update to APPROVED");			
 		} else {
 			kycDocumentEntity.setStatus(Status.REJECTED);
+
+			if (isManager) {
+				auditLogService.logManagerOverride(
+						jwtDto.getUserId(), "REJECT_KYC", "KYC", id,
+						"Manager rejected KYC verification for customer #" + (kycDocumentEntity.getCustomer() != null ? kycDocumentEntity.getCustomer().getCustomerId() : "N/A")
+				);
+			}
 
 			// Publish KYC rejection notification to RabbitMQ
 			try {
@@ -184,7 +206,54 @@ public class KycServiceImpl implements KycService {
 
 	@Override
 	public ResponseEntity<?> getKycByStatus(Status status) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+		if (Role.CUSTOMER.name().equals(jwt.getRoleName())) {
+			throw new AccessDeniedException("You are not authorized to view KYC list.");
+		}
+
 	    List<KycDocuments> kycDocumentEntity = kycDocumentRepository.findByStatus(status);
+	    List<KycDocumentDto3> response = new ArrayList<>();
+
+	    kycDocumentEntity.forEach(kyc -> {
+	        KycDocumentDto3 dto = mapper.map(kyc, KycDocumentDto3.class);
+	        if (kyc.getCustomer() != null) {
+	            dto.setCustomerId(kyc.getCustomer().getCustomerId());
+	        }
+	        response.add(dto);
+	    });
+
+	    return ResponseEntity.ok(response);
+	}
+
+	@Override
+	public ResponseEntity<?> getMyKyc() {
+	    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+	    JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+	    Long customerId = jwt.getUserId();
+
+	    Customer customer = customerRepository.findById(customerId)
+	            .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+	    KycDocuments kyc = kycDocumentRepository.findByCustomer(customer);
+	    if (kyc == null) {
+	        return ResponseEntity.ok(new KycDocumentDto3());
+	    }
+
+	    KycDocumentDto3 dto = mapper.map(kyc, KycDocumentDto3.class);
+	    dto.setCustomerId(customerId);
+	    return ResponseEntity.ok(dto);
+	}
+
+	@Override
+	public ResponseEntity<?> getAllKyc() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+		if (Role.CUSTOMER.name().equals(jwt.getRoleName())) {
+			throw new AccessDeniedException("You are not authorized to view KYC list.");
+		}
+
+	    List<KycDocuments> kycDocumentEntity = kycDocumentRepository.findAll();
 	    List<KycDocumentDto3> response = new ArrayList<>();
 
 	    kycDocumentEntity.forEach(kyc -> {

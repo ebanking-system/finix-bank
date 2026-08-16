@@ -16,6 +16,10 @@ class RAGEngine:
         self.settings = get_settings()
         self.chroma_mgr = get_chroma_manager()
 
+    def is_groq_available(self) -> bool:
+        key = (self.settings.GROQ_API_KEY or "").strip()
+        return bool(key and len(key) > 10 and not key.startswith("gsk_your_groq"))
+
     def generate_groq_response(self, system_prompt: str, user_query: str) -> str:
         """
         Calls the Groq API (free tier, llama-3.1-8b-instant) to generate answer.
@@ -23,7 +27,7 @@ class RAGEngine:
         """
         api_key = self.settings.GROQ_API_KEY
         if not api_key:
-            raise ValueError("GROQ_API_KEY is not configured.")
+            return None
 
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -41,16 +45,23 @@ class RAGEngine:
         }
 
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=15)
+            resp = requests.post(url, json=payload, headers=headers, timeout=12)
             if resp.status_code == 200:
                 data = resp.json()
                 return data["choices"][0]["message"]["content"].strip()
             else:
-                logger.error(f"Groq API returned HTTP {resp.status_code}: {resp.text}")
-                return "I'm experiencing high traffic right now. Please try again in a few moments or contact Finix Bank support at 1800-FINIX-BANK."
+                logger.warning(f"Groq API returned HTTP {resp.status_code}: {resp.text}")
+                return None
         except Exception as e:
-            logger.error(f"Failed to query Groq API: {str(e)}")
-            return "I'm having trouble connecting to my reasoning engine right now. Please contact customer support."
+            logger.warning(f"Failed to query Groq API: {str(e)}")
+            return None
+
+    def format_direct_knowledge_response(self, relevant_chunks: List[Dict[str, Any]]) -> str:
+        """
+        Formats top retrieved FAQ knowledge base content directly when Groq LLM is not active.
+        """
+        top_chunk = relevant_chunks[0]["text"].strip()
+        return top_chunk
 
     def answer_query(
         self, query: str, history: List[MessageTurn] = None
@@ -58,7 +69,7 @@ class RAGEngine:
         """
         Executes full RAG workflow:
         1. Query ChromaDB for top-K context chunks above similarity threshold.
-        2. If match found: build prompt and generate Groq answer.
+        2. If match found: build prompt and attempt Groq generation or direct knowledge answer.
         3. If no match above threshold: return friendly fallback without LLM hallucination.
         """
         start_time = time.time()
@@ -81,15 +92,22 @@ class RAGEngine:
             context_parts.append(f"[Source {idx}: {src_file}]\n{chunk['text']}")
 
         context_text = "\n\n".join(context_parts)
-        if history:
-            hist_str = format_history(history)
-            if hist_str:
-                context_text = f"CONVERSATION HISTORY:\n{hist_str}\n\n" + context_text
+        answer = None
 
-        system_prompt = FINIXBOT_SYSTEM_PROMPT.format(context=context_text, query=query)
-        answer = self.generate_groq_response(system_prompt, query)
+        if self.is_groq_available():
+            if history:
+                hist_str = format_history(history)
+                if hist_str:
+                    context_text = f"CONVERSATION HISTORY:\n{hist_str}\n\n" + context_text
+
+            system_prompt = FINIXBOT_SYSTEM_PROMPT.format(context=context_text, query=query)
+            answer = self.generate_groq_response(system_prompt, query)
+
+        # Fallback to direct structured knowledge retrieval if Groq is unconfigured or failed
+        if not answer:
+            answer = self.format_direct_knowledge_response(relevant_chunks)
+
         exec_time = round(time.time() - start_time, 3)
-
         return answer, sorted(list(citations)), "faq", exec_time
 
 _rag_engine_instance = None

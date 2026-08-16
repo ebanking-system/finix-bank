@@ -59,6 +59,16 @@ public class KycController {
 		return kycService.getKycByStatus(status);
 	}
 
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyKyc() {
+        return kycService.getMyKyc();
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllKyc() {
+        return kycService.getAllKyc();
+    }
+
     @GetMapping("/files/{customerId}/{fileName}")
     public ResponseEntity<Resource> getKycFile(
             @PathVariable Long customerId,

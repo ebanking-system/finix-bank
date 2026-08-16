@@ -9,10 +9,10 @@ import {
   FiLock,
   FiRefreshCw,
   FiKey,
-  FiEye,
-  FiEyeOff,
   FiAlertTriangle,
   FiArrowRight,
+  FiSlash,
+  FiUnlock,
 } from 'react-icons/fi';
 import { cardService } from '../../services/cardService';
 import { accountService } from '../../services/accountService';
@@ -32,6 +32,7 @@ const Cards = () => {
   const [issuedCards, setIssuedCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   // Customer accounts check
   const [userAccounts, setUserAccounts] = useState([]);
@@ -42,9 +43,6 @@ const Cards = () => {
   const [selectedCardForPin, setSelectedCardForPin] = useState(null);
   const [newPin, setNewPin] = useState('');
   const [pinSubmitting, setPinSubmitting] = useState(false);
-
-  // CVV / PIN visibility state
-  const [revealedCardId, setRevealedCardId] = useState(null);
 
   const fetchAccounts = async () => {
     try {
@@ -64,11 +62,7 @@ const Cards = () => {
     setLoading(true);
     try {
       const data = await cardService.getCard(accType);
-      if (data) {
-        setIssuedCards(Array.isArray(data) ? data : [data]);
-      } else {
-        setIssuedCards([]);
-      }
+      setIssuedCards(Array.isArray(data) ? data : data ? [data] : []);
     } catch (error) {
       setIssuedCards([]);
     } finally {
@@ -99,11 +93,28 @@ const Cards = () => {
     } catch (error) {
       const msg =
         error.response?.data?.message ||
+        error.response?.data?.data ||
         (typeof error.response?.data === 'string' ? error.response.data : null) ||
         'Failed to issue card. Ensure you have an active account for this type.';
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleBlock = async (card) => {
+    const cardId = card.cardId || card.id;
+    if (!cardId) return;
+
+    setTogglingId(cardId);
+    try {
+      const resp = await cardService.toggleBlock(cardId);
+      toast.success(resp?.message || resp?.data || 'Card status updated!');
+      fetchCardDetails(accountType);
+    } catch (error) {
+      toast.error('Failed to update card block status.');
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -136,7 +147,7 @@ const Cards = () => {
   return (
     <CustomerLayout
       title="Debit & Credit Cards"
-      subtitle="Issue virtual or physical cards, view card details, and update security PINs."
+      subtitle="Issue virtual or physical cards, manage card controls, and update security PINs."
     >
       <div className="space-y-6">
         {/* Precondition Alert if no active accounts */}
@@ -279,22 +290,30 @@ const Cards = () => {
             ) : (
               <div className="space-y-6">
                 {issuedCards.map((c, idx) => {
-                  const isRevealed = revealedCardId === (c.cardId || idx);
+                  const cardId = c.cardId || c.id || idx;
+                  const isBlocked = c.status === 'BLOCKED';
+
                   return (
                     <div
-                      key={c.cardId || idx}
-                      className="p-6 rounded-3xl bg-gradient-to-tr from-navy-950 via-navy-900 to-slate-900 text-white shadow-xl space-y-6 relative overflow-hidden"
+                      key={cardId}
+                      className={`p-6 rounded-3xl ${
+                        isBlocked
+                          ? 'bg-gradient-to-tr from-slate-900 via-slate-800 to-rose-950/80 border border-rose-900/40'
+                          : 'bg-gradient-to-tr from-navy-950 via-navy-900 to-slate-900'
+                      } text-white shadow-xl space-y-6 relative overflow-hidden`}
                     >
                       <div className="flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-2">
                           <Badge variant={c.cardType || cardType}>{c.cardType || cardType}</Badge>
-                          <Badge variant={c.status || 'ACTIVE'}>{c.status || 'ACTIVE'}</Badge>
+                          <Badge variant={isBlocked ? 'REJECTED' : 'ACTIVE'}>
+                            {c.status || 'ACTIVE'}
+                          </Badge>
                         </div>
                         <span className="text-xs font-mono tracking-widest text-slate-400">FINIX SECURE</span>
                       </div>
 
                       <div className="relative z-10 space-y-1">
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Card Number</span>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Card Number (Masked)</span>
                         <div className="text-xl sm:text-2xl font-mono font-extrabold tracking-widest">
                           {c.cardNum || '•••• •••• •••• 1234'}
                         </div>
@@ -316,21 +335,23 @@ const Cards = () => {
 
                           <div>
                             <span className="text-[10px] uppercase font-bold text-slate-400 block">CVV</span>
-                            <span className="font-mono font-bold">{isRevealed ? c.cvv || '123' : '•••'}</span>
+                            <span className="font-mono font-bold">•••</span>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setRevealedCardId(isRevealed ? null : c.cardId || idx)}
-                            className="p-2 rounded-xl bg-navy-800 text-slate-300 hover:text-white cursor-pointer"
-                            title={isRevealed ? 'Hide details' : 'Show CVV & details'}
-                          >
-                            {isRevealed ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-                          </button>
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-navy-800 flex justify-end relative z-10">
+                      <div className="pt-4 border-t border-navy-800/80 flex items-center justify-between relative z-10">
+                        <Button
+                          variant={isBlocked ? 'secondary' : 'outline'}
+                          size="sm"
+                          icon={isBlocked ? FiUnlock : FiSlash}
+                          onClick={() => handleToggleBlock(c)}
+                          isLoading={togglingId === cardId}
+                          className={isBlocked ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-rose-800 text-rose-300 hover:bg-rose-950/60'}
+                        >
+                          {isBlocked ? 'Unblock Card' : 'Block Card'}
+                        </Button>
+
                         <Button
                           variant="outline"
                           size="sm"
@@ -341,7 +362,7 @@ const Cards = () => {
                           }}
                           className="border-slate-700 text-white hover:bg-slate-800"
                         >
-                          Change Security PIN
+                          Change PIN
                         </Button>
                       </div>
                     </div>

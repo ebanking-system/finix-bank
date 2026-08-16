@@ -2,6 +2,8 @@ package com.finix.account.controller;
 
 import com.finix.account.dto.AccountResponse;
 import com.finix.account.dto.CreateAccountRequest;
+import com.finix.account.dto.DepositRequestDTO;
+import com.finix.account.dto.EmployeeDepositRequestDTO;
 import com.finix.account.entity.AccountType;
 import com.finix.account.service.AccountService;
 import com.finix.auth.dto.ApiResponse;
@@ -31,11 +33,26 @@ public class AccountController {
 
         AccountResponse response =
                 accountService.openAccountForCurrentCustomer(request);
-        if(response==null) {
-        	return new ResponseEntity<>("KYC NOT APPROVED YET",HttpStatus.NO_CONTENT);
-        }
 
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(new ApiResponse("SUCCESS", response), HttpStatus.CREATED);
+    }
+
+    /**
+     * Self-Service Deposit / Add Funds (Customer)
+     */
+    @PostMapping("/deposit")
+    public ResponseEntity<ApiResponse> depositSelf(
+            @Valid @RequestBody DepositRequestDTO request) {
+        return ResponseEntity.ok(accountService.depositSelf(request));
+    }
+
+    /**
+     * Teller / Staff-Assisted Deposit (Employee/Manager)
+     */
+    @PostMapping("/employee/deposit")
+    public ResponseEntity<ApiResponse> depositEmployee(
+            @Valid @RequestBody EmployeeDepositRequestDTO request) {
+        return ResponseEntity.ok(accountService.depositEmployee(request));
     }
     
     @GetMapping("/{accountId}")

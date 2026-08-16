@@ -13,6 +13,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 RUN addgroup -S finix && adduser -S finix -G finix
+RUN mkdir -p /app/uploads/kyc && chown -R finix:finix /app/uploads
 USER finix
 
 COPY --from=builder /build/target/*.jar app.jar

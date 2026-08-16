@@ -20,7 +20,11 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
 	
 	boolean existsByCustomerAndStatusIn(Customer customer, List<LoanStatus> statuses);
 
-	boolean existsByCustomerAndStatus(Customer customer, LoanStatus defaulted);
+	boolean existsByCustomerAndStatus(Customer customer, LoanStatus status);
+
+	List<Loan> findAllByOrderByLoanIdDesc();
+
+	List<Loan> findByStatusOrderByLoanIdDesc(LoanStatus status);
 	
 	boolean existsByLoanType(LoanType loanType);
 }

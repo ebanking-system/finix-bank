@@ -1,7 +1,6 @@
 package com.finix.fd.dto;
 
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 
 import com.finix.account.entity.AccountType;
@@ -22,11 +21,23 @@ public class FDResponseDTO {
 
     private AccountType accountType;
 
+    private String accountNumber;
+
+    private Long customerId;
+
+    private String customerName;
+
     private BigDecimal depositAmount;
+
+    private double interestRate;
 
     private Tenure tenureYears;
     
     private LocalDateTime startDate;
     
     private LocalDateTime maturityDate;
+
+    private BigDecimal maturityAmount;
+
+    private com.finix.fd.entity.Status status;
 }

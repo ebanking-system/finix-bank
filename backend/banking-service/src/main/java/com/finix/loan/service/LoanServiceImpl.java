@@ -36,13 +36,14 @@ import com.finix.account.entity.AccountStatus;
 import com.finix.account.entity.AccountType;
 import com.finix.account.repository.AccountRepository;
 import com.finix.auth.dto.ApiResponse;
+import com.finix.auth.dto.JwtDTO;
+import com.finix.auth.entity.Role;
 import com.finix.customer.entity.Customer;
 import com.finix.loan.entity.Loan;
 import com.finix.loan.entity.LoanRepayment;
+import com.finix.loan.entity.LoanStatus;
 import com.finix.loan.entity.LoanType;
 import com.finix.loan.entity.RepaymentStatus;
-import com.finix.loan.entity.LoanStatus;
-import com.finix.auth.dto.JwtDTO;
 import com.finix.transaction.entity.Transaction;
 import com.finix.transaction.entity.TransactionStatus;
 import com.finix.transaction.entity.TransactionType;
@@ -78,6 +79,8 @@ public class LoanServiceImpl implements LoanService {
 	private final AuthorizationServiceImpl authorizationServiceImpl;
 	
 	private final NotificationProducer notificationProducer;
+
+	private final com.finix.auth.service.AuditLogService auditLogService;
 
 
 	// for customer to apply loan
@@ -209,6 +212,10 @@ public class LoanServiceImpl implements LoanService {
 	@Override
 	public ResponseEntity<?> getPendingLoans() {
 
+		authorizationServiceImpl.authorize(
+				Department.LOANS,
+				Designation.LOAN_OFFICER);
+
 		List<Loan> loans = loanRepository.findByStatus(LoanStatus.UNDER_REVIEW);
 
 		List<LoanResponseDto> response = loans.stream().map(this::mapLoanResponse).toList();
@@ -217,7 +224,7 @@ public class LoanServiceImpl implements LoanService {
 
 	}
 
-	// approve loan by Employee
+	// approve loan by Employee / Manager
 	@Override
 	public ResponseEntity<?> approveLoan(Long loanId) {
 
@@ -249,6 +256,13 @@ public class LoanServiceImpl implements LoanService {
 
 		// Save
 		Loan savedLoan = loanRepository.save(loan);
+
+		if (Role.MANAGER.name().equals(jwt.getRoleName())) {
+			auditLogService.logManagerOverride(
+					jwt.getUserId(), "APPROVE_LOAN", "LOAN", loanId,
+					"Manager approved loan application #" + loanId + " for amount ₹" + loan.getAmount()
+			);
+		}
 		
 		NotificationEvent event = NotificationEvent.builder()
 		        .customerId(loan.getCustomer().getCustomerId())
@@ -294,6 +308,13 @@ public class LoanServiceImpl implements LoanService {
 		loan.setRejectionReason(request.getRejectionReason());
 
 		Loan savedLoan = loanRepository.save(loan);
+
+		if (Role.MANAGER.name().equals(jwt.getRoleName())) {
+			auditLogService.logManagerOverride(
+					jwt.getUserId(), "REJECT_LOAN", "LOAN", loanId,
+					"Manager rejected loan application #" + loanId + ". Reason: " + request.getRejectionReason()
+			);
+		}
 
 		return ResponseEntity.ok(mapLoanResponse(savedLoan));
 	}
@@ -389,7 +410,89 @@ public class LoanServiceImpl implements LoanService {
 
 		emiScheduleService.generateSchedule(loan);
 
+		if (Role.MANAGER.name().equals(jwt.getRoleName())) {
+			auditLogService.logManagerOverride(
+					jwt.getUserId(), "DISBURSE_LOAN", "LOAN", loanId,
+					"Manager disbursed loan #" + loanId + " of amount ₹" + loan.getAmount() + " to customer #" + loan.getCustomer().getCustomerId()
+			);
+		}
+
 		return ResponseEntity.ok(mapLoanResponse(loan));
+	}
+
+	@Override
+	public ResponseEntity<?> getAllLoans() {
+		authorizationServiceImpl.authorize(
+				Department.LOANS,
+				Designation.LOAN_OFFICER);
+
+		List<Loan> loans = loanRepository.findAllByOrderByLoanIdDesc();
+		List<LoanResponseDto> response = loans.stream().map(this::mapLoanResponse).toList();
+		return ResponseEntity.ok(response);
+	}
+
+	@Override
+	public ResponseEntity<?> getLoansByStatus(LoanStatus status) {
+		authorizationServiceImpl.authorize(
+				Department.LOANS,
+				Designation.LOAN_OFFICER);
+
+		List<Loan> loans = loanRepository.findByStatusOrderByLoanIdDesc(status);
+		List<LoanResponseDto> response = loans.stream().map(this::mapLoanResponse).toList();
+		return ResponseEntity.ok(response);
+	}
+
+	@Override
+	public ResponseEntity<?> updateLoan(Long loanId, com.finix.loan.dto.LoanUpdateRequestDto request) {
+		authorizationServiceImpl.authorize(
+				Department.LOANS,
+				Designation.LOAN_OFFICER);
+
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		JwtDTO jwt = (JwtDTO) authentication.getPrincipal();
+
+		Loan loan = loanRepository.findById(loanId).orElseThrow(() -> new RuntimeException("Loan not found"));
+
+		if (request.getLoanTypeId() != null) {
+			LoanType loanType = loanTypeRepository.findById(request.getLoanTypeId())
+					.orElseThrow(() -> new RuntimeException("Loan type not found"));
+			loan.setLoanType(loanType);
+		}
+
+		if (request.getAmount() != null) {
+			loan.setAmount(request.getAmount());
+			if (loan.getStatus() == LoanStatus.UNDER_REVIEW || loan.getStatus() == LoanStatus.APPROVED) {
+				loan.setRemainingAmount(request.getAmount());
+			}
+		}
+
+		if (request.getTenureMonths() != null) {
+			loan.setTenureMonths(request.getTenureMonths());
+		}
+
+		if (request.getStatus() != null) {
+			loan.setStatus(request.getStatus());
+		}
+
+		if (request.getRejectionReason() != null) {
+			loan.setRejectionReason(request.getRejectionReason());
+		}
+
+		// Recalculate EMI if approved or active
+		if (loan.getStatus() == LoanStatus.APPROVED || loan.getStatus() == LoanStatus.ACTIVE) {
+			loan.setEmi(emiCalculatorService.calculateEmi(loan));
+		}
+
+		Loan saved = loanRepository.save(loan);
+
+		if (Role.MANAGER.name().equals(jwt.getRoleName())) {
+			auditLogService.logManagerOverride(
+					jwt.getUserId(), "UPDATE_LOAN", "LOAN", loanId,
+					"Manager updated loan #" + loanId + " terms (Amount: ₹" + loan.getAmount() + ", Tenure: " + loan.getTenureMonths() + "m, Status: " + loan.getStatus() + ")"
+			);
+		}
+
+		return ResponseEntity.ok(mapLoanResponse(saved));
 	}
 
 	// ================= Helper Method =================

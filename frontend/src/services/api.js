@@ -57,11 +57,13 @@ api.interceptors.response.use(
       message = error.message;
     }
 
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       clearAuthSession();
-      toast.error('Your session expired or access was forbidden. Please sign in again.');
+      toast.error('Your session expired. Please sign in again.');
+    } else if (status === 403) {
+      toast.error(message || 'Access forbidden.');
     } else if (status >= 500) {
-      toast.error('Server error. Please try again later.');
+      toast.error(message || 'Server error. Please try again later.');
     }
 
     return Promise.reject(error);
