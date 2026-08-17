@@ -126,12 +126,11 @@ const CustomerLayout = ({ children, title, subtitle }) => {
           </div>
 
           <Button
-            variant="outline"
+            variant="dark-outline"
             fullWidth
             size="sm"
             onClick={handleLogout}
             icon={FiLogOut}
-            className="border-navy-700 text-slate-300 hover:bg-navy-800 hover:text-white"
           >
             Sign Out
           </Button>

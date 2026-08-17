@@ -173,7 +173,7 @@ const Beneficiaries = () => {
           <div>
             <h2 className="text-lg font-bold text-navy-900">Registered Beneficiaries ({beneficiaries.length})</h2>
             <p className="text-xs text-slate-500">
-              Easily manage trusted payees for IMPS/NEFT/RTGS transfers.
+              Easily manage trusted payees for instant peer-to-peer and cross-account transfers.
             </p>
           </div>
           <Button variant="primary" icon={FiUserPlus} onClick={() => setAddModalOpen(true)}>

@@ -1,7 +1,5 @@
 import api from './api';
 
-// TODO: replace with GET /api/loans/types once backend adds it
-
 export const loanService = {
   /**
    * Customer apply for a loan

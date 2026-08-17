@@ -355,7 +355,7 @@ const CustAccounts = () => {
         isOpen={depositModalOpen}
         onClose={() => setDepositModalOpen(false)}
         title="Deposit Money into Account"
-        subtitle="Simulate instant funding via UPI, Net Banking, or Wire Transfer."
+        subtitle="Simulate instant funding via UPI, Net Banking, or Direct Transfer."
       >
         <form onSubmit={handleDepositSubmit} className="space-y-4">
           <div>

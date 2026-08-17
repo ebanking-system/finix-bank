@@ -219,7 +219,7 @@ const Kyc = () => {
               </div>
               <h3 className="text-lg font-bold text-navy-900">You're All Set!</h3>
               <p className="text-sm text-slate-600 max-w-md mx-auto">
-                Your KYC identity verification is complete and your bank accounts are active. You can now perform wire transfers, manage cards, and open fixed deposits.
+                Your KYC identity verification is complete and your bank accounts are active. You can now perform fund transfers, manage cards, and open fixed deposits.
               </p>
               <div className="pt-2">
                 <Button

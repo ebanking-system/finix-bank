@@ -106,7 +106,7 @@ const LandingPage = () => {
                   <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                     <FiCheckCircle className="w-4 h-4" />
                   </div>
-                  <span className="font-medium text-sm sm:text-base">Instant 24/7 wire & NEFT money transfers</span>
+                  <span className="font-medium text-sm sm:text-base">Instant 24/7 peer-to-peer & cross-account transfers</span>
                 </div>
 
                 <div className="flex items-center gap-3 text-slate-200">
@@ -121,11 +121,11 @@ const LandingPage = () => {
               <div className="pt-4 border-t border-navy-800/80 flex items-center gap-6 text-xs text-slate-400">
                 <div className="flex items-center gap-2">
                   <FiLock className="text-emerald-400 w-4 h-4" />
-                  <span>256-Bit Encrypted</span>
+                  <span>BCrypt & JWT Secured</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <FiShield className="text-coral-400 w-4 h-4" />
-                  <span>RBI Compliant</span>
+                  <span>Role-Based Access</span>
                 </div>
               </div>
             </div>
@@ -254,7 +254,7 @@ const LandingPage = () => {
           </div>
           <h2 className="text-3xl font-bold sm:text-4xl">Security you can bank on.</h2>
           <p className="text-slate-300 max-w-2xl mx-auto text-base">
-            Your deposits and personal data are protected by multi-factor authentication, end-to-end encryption, and rigorous regulatory compliance.
+            Your accounts and transactions are protected by salted BCrypt password hashing, signed JWT session tokens, and strict role-based access control.
           </p>
           <div className="pt-4">
             <Link to="/signup">

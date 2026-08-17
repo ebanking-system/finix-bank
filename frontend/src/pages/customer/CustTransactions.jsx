@@ -142,7 +142,7 @@ const CustTransactions = () => {
         remarks: data.remarks,
       });
 
-      toast.success(resp?.message || 'Wire transfer completed successfully!');
+      toast.success(resp?.message || 'Fund transfer completed successfully!');
       reset({
         accountType: 'SAVINGS',
         toAccount: '',
@@ -165,8 +165,8 @@ const CustTransactions = () => {
 
   return (
     <CustomerLayout
-      title="Transactions & Wire Transfers"
-      subtitle="View your account statement, track wire transfers, and perform instant payee transfers."
+      title="Transactions & Fund Transfers"
+      subtitle="View your account statement, track transaction history, and perform instant payee transfers."
     >
       <div className="space-y-6">
         {/* Precondition Notice */}
@@ -179,7 +179,7 @@ const CustTransactions = () => {
               <div>
                 <h2 className="text-sm font-bold text-navy-900">Active Account Required for Fund Transfers</h2>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Money transfers require an active, KYC-approved account. Please complete KYC submission to unlock wire transfers.
+                  Money transfers require an active, KYC-approved account. Please complete KYC submission to unlock fund transfers.
                 </p>
               </div>
             </div>
@@ -213,7 +213,7 @@ const CustTransactions = () => {
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <FiSend className="w-4 h-4 text-coral-500" /> Instant Wire Transfer
+            <FiSend className="w-4 h-4 text-coral-500" /> Instant Fund Transfer
           </button>
         </div>
 
@@ -313,7 +313,7 @@ const CustTransactions = () => {
                   </div>
                   <h3 className="text-sm font-bold text-navy-900">No Transactions Found</h3>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Your transactions will appear here once you perform deposits or wire transfers.
+                    Your transactions will appear here once you perform deposits or transfers.
                   </p>
                 </div>
               ) : (

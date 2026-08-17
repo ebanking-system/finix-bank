@@ -40,8 +40,7 @@ namespace EbankingNotificationService.Consumers
                 Password = _configuration["RabbitMQ:Password"]!
             };
 
-            int maxRetries = 15;
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -64,10 +63,17 @@ namespace EbankingNotificationService.Consumers
                         $"Successfully connected to RabbitMQ. Waiting for messages from: {queueName}");
                     break;
                 }
-                catch (Exception ex) when (attempt < maxRetries && !stoppingToken.IsCancellationRequested)
+                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
                 {
-                    Console.WriteLine($"RabbitMQ not ready (attempt {attempt}/{maxRetries}): {ex.Message}. Retrying in 3 seconds...");
-                    await Task.Delay(3000, stoppingToken);
+                    Console.WriteLine($"RabbitMQ not ready yet ({ex.Message}). Retrying in 3 seconds...");
+                    try
+                    {
+                        await Task.Delay(3000, stoppingToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
                 }
             }
 
