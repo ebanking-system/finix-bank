@@ -24,6 +24,14 @@ public class GetAllTransactionsDto {
 
     private String counterPartyAccountNumber;
 
+    private String fromAccountNumber;
+
+    private String fromAccountHolderName;
+
+    private String toAccountNumber;
+
+    private String toAccountHolderName;
+
     // TRANSFER / DEPOSIT / WITHDRAWAL
     private TransactionType transactionType;
 
@@ -33,6 +41,8 @@ public class GetAllTransactionsDto {
     private BigDecimal amount;
 
     private TransactionStatus transactionStatus;
+
+    private TransactionStatus status;
 
     private String referenceNumber;
 

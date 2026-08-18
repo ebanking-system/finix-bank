@@ -19,20 +19,33 @@ import {
   FiRefreshCw,
   FiAlertTriangle,
   FiArrowRight,
+  FiUsers,
+  FiUserCheck,
+  FiCreditCard,
+  FiCopy,
+  FiCheck,
+  FiEye,
+  FiFileText,
+  FiCornerDownRight,
 } from 'react-icons/fi';
 import { transactionService } from '../../services/transactionService';
 import { accountService } from '../../services/accountService';
+import { beneficiaryService } from '../../services/beneficiaryService';
 import { useAuth } from '../../context/AuthContext';
 import CustomerLayout from '../../components/layout/CustomerLayout';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
+import Modal from '../../components/common/Modal';
 import Spinner from '../../components/common/Spinner';
 
 const transferSchema = yup.object().shape({
   accountType: yup.string().required('Account type is required'),
-  toAccount: yup.string().trim().required('Recipient account number is required'),
+  toAccount: yup
+    .string()
+    .trim()
+    .required('Recipient account number is required'),
   amount: yup
     .number()
     .typeError('Amount must be a number')
@@ -42,13 +55,40 @@ const transferSchema = yup.object().shape({
   remarks: yup.string().trim().required('Remarks are required'),
 });
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(d);
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 const CustTransactions = () => {
   const { userId } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('history'); // 'history' | 'transfer'
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Accounts state
+  // Accounts & Beneficiaries state
   const [hasActiveAccount, setHasActiveAccount] = useState(true);
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [beneficiariesLoading, setBeneficiariesLoading] = useState(false);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
+
+  // Receipt Inspection Modal
+  const [selectedTx, setSelectedTx] = useState(null);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [copiedRef, setCopiedRef] = useState(false);
 
   // Pagination & Filters
   const [page, setPage] = useState(0);
@@ -64,13 +104,15 @@ const CustTransactions = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     reset,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(transferSchema),
     defaultValues: {
       accountType: 'SAVINGS',
-      referenceNumber: `REF-${Date.now().toString().slice(-6)}`,
+      toAccount: '',
+      referenceNumber: `REF-${Date.now().toString().slice(-8)}`,
       remarks: 'Fund Transfer',
     },
   });
@@ -84,6 +126,19 @@ const CustTransactions = () => {
       }
     } catch (e) {
       // Silent catch
+    }
+  };
+
+  const fetchBeneficiaries = async () => {
+    setBeneficiariesLoading(true);
+    try {
+      const data = await beneficiaryService.getBeneficiaries();
+      const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      setBeneficiaries(list);
+    } catch (err) {
+      setBeneficiaries([]);
+    } finally {
+      setBeneficiariesLoading(false);
     }
   };
 
@@ -105,26 +160,38 @@ const CustTransactions = () => {
     }
   };
 
-  const location = useLocation();
-
   useEffect(() => {
     if (location.state?.toAccount) {
       setActiveTab('transfer');
-      reset((prev) => ({
-        ...prev,
-        toAccount: location.state.toAccount,
-        remarks: location.state.beneficiaryName ? `Transfer to ${location.state.beneficiaryName}` : 'Fund Transfer',
-      }));
+      setValue('toAccount', location.state.toAccount);
+      if (location.state.beneficiaryName) {
+        setValue('remarks', `Transfer to ${location.state.beneficiaryName}`);
+      }
     }
-  }, [location.state, reset]);
+  }, [location.state, setValue]);
 
   useEffect(() => {
     checkActiveAccounts();
+    fetchBeneficiaries();
   }, [userId]);
 
   useEffect(() => {
     fetchTransactions();
   }, [page, nature, status, fromDate, toDate]);
+
+  const handleSelectBeneficiary = (b) => {
+    setSelectedBeneficiary(b);
+    setValue('toAccount', b.accountNumber);
+    setValue('remarks', `Transfer to ${b.beneficiaryName}`);
+  };
+
+  const handleCopyReference = (refText) => {
+    if (!refText) return;
+    navigator.clipboard.writeText(refText);
+    setCopiedRef(true);
+    setTimeout(() => setCopiedRef(false), 2000);
+    toast.success('Reference number copied!');
+  };
 
   const onTransferSubmit = async (data) => {
     if (!hasActiveAccount) {
@@ -136,10 +203,10 @@ const CustTransactions = () => {
     try {
       const resp = await transactionService.transferMoney({
         accountType: data.accountType,
-        toAccount: data.toAccount,
+        toAccount: data.toAccount.trim(),
         amount: Number(data.amount),
-        referenceNumber: data.referenceNumber,
-        remarks: data.remarks,
+        referenceNumber: data.referenceNumber.trim(),
+        remarks: data.remarks.trim(),
       });
 
       toast.success(resp?.message || 'Fund transfer completed successfully!');
@@ -147,9 +214,10 @@ const CustTransactions = () => {
         accountType: 'SAVINGS',
         toAccount: '',
         amount: '',
-        referenceNumber: `REF-${Date.now().toString().slice(-6)}`,
+        referenceNumber: `REF-${Date.now().toString().slice(-8)}`,
         remarks: 'Fund Transfer',
       });
+      setSelectedBeneficiary(null);
       setActiveTab('history');
       fetchTransactions();
     } catch (error) {
@@ -163,10 +231,15 @@ const CustTransactions = () => {
     }
   };
 
+  const openReceipt = (tx) => {
+    setSelectedTx(tx);
+    setReceiptModalOpen(true);
+  };
+
   return (
     <CustomerLayout
       title="Transactions & Fund Transfers"
-      subtitle="View your account statement, track transaction history, and perform instant payee transfers."
+      subtitle="View detailed account statements, track money sent and received, and transfer funds to beneficiaries."
     >
       <div className="space-y-6">
         {/* Precondition Notice */}
@@ -217,7 +290,9 @@ const CustTransactions = () => {
           </button>
         </div>
 
-        {/* TAB 1: Statement / History */}
+        {/* ========================================================== */}
+        {/* TAB 1: STATEMENT / HISTORY                                 */}
+        {/* ========================================================== */}
         {activeTab === 'history' && (
           <div className="space-y-6">
             {/* Filter Bar */}
@@ -246,11 +321,11 @@ const CustTransactions = () => {
                       setNature(e.target.value);
                       setPage(0);
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
                   >
-                    <option value="">All Flow (Debit / Credit)</option>
-                    <option value="DEBIT">Debit (Outward)</option>
-                    <option value="CREDIT">Credit (Inward)</option>
+                    <option value="">All Flows (Debit & Credit)</option>
+                    <option value="DEBIT">Debit (Money Sent Out)</option>
+                    <option value="CREDIT">Credit (Money Received In)</option>
                   </select>
                 </div>
 
@@ -262,7 +337,7 @@ const CustTransactions = () => {
                       setStatus(e.target.value);
                       setPage(0);
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
                   >
                     <option value="">All Statuses</option>
                     <option value="SUCCESS">SUCCESS</option>
@@ -280,7 +355,7 @@ const CustTransactions = () => {
                       setFromDate(e.target.value);
                       setPage(0);
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
                   />
                 </div>
 
@@ -293,7 +368,7 @@ const CustTransactions = () => {
                       setToDate(e.target.value);
                       setPage(0);
                     }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
                   />
                 </div>
               </div>
@@ -303,8 +378,8 @@ const CustTransactions = () => {
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
               {loading ? (
                 <div className="p-12 text-center space-y-3">
-                  <Spinner size="lg" className="text-coral-500" />
-                  <p className="text-xs text-slate-500">Fetching account transaction records...</p>
+                  <Spinner size="lg" className="text-coral-500 mx-auto" />
+                  <p className="text-xs text-slate-500 font-medium">Fetching live account statements and counterparty records...</p>
                 </div>
               ) : transactionsData.content.length === 0 ? (
                 <div className="p-12 text-center space-y-3">
@@ -313,7 +388,7 @@ const CustTransactions = () => {
                   </div>
                   <h3 className="text-sm font-bold text-navy-900">No Transactions Found</h3>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Your transactions will appear here once you perform deposits or transfers.
+                    No transactions match your current filters. Start an instant transfer or deposit to see history.
                   </p>
                 </div>
               ) : (
@@ -322,36 +397,137 @@ const CustTransactions = () => {
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 uppercase font-semibold">
                         <th className="py-3.5 px-4">Ref #</th>
-                        <th className="py-3.5 px-4">Type</th>
-                        <th className="py-3.5 px-4">From Account</th>
-                        <th className="py-3.5 px-4">To Account</th>
+                        <th className="py-3.5 px-4">Flow / Type</th>
+                        <th className="py-3.5 px-4">From (Sender)</th>
+                        <th className="py-3.5 px-4">To (Recipient)</th>
                         <th className="py-3.5 px-4">Amount</th>
                         <th className="py-3.5 px-4">Status</th>
                         <th className="py-3.5 px-4">Date & Time</th>
+                        <th className="py-3.5 px-4 text-right">Details</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {transactionsData.content.map((tx, idx) => (
-                        <tr key={tx.transactionId || idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-500">
-                            {tx.referenceNumber || `#${tx.transactionId}`}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="font-semibold text-slate-700">{tx.transactionType || 'TRANSFER'}</span>
-                          </td>
-                          <td className="py-3.5 px-4 font-mono">{tx.fromAccount || 'Self'}</td>
-                          <td className="py-3.5 px-4 font-mono">{tx.toAccount || 'N/A'}</td>
-                          <td className="py-3.5 px-4 font-extrabold text-navy-900">
-                            ₹{Number(tx.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <Badge variant={tx.status || 'SUCCESS'}>{tx.status || 'SUCCESS'}</Badge>
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-500">
-                            {tx.timestamp ? new Date(tx.timestamp).toLocaleString('en-IN') : 'Recent'}
-                          </td>
-                        </tr>
-                      ))}
+                      {transactionsData.content.map((tx, idx) => {
+                        const isDebit =
+                          String(tx.nature || '').toUpperCase() === 'DEBIT' ||
+                          (tx.transactionType === 'WITHDRAWAL');
+
+                        const senderName =
+                          isDebit
+                            ? 'Self (My Account)'
+                            : tx.fromAccountHolderName || tx.counterPartyName || 'Branch Cash Counter';
+                        const senderAcc = tx.fromAccountNumber || 'Self';
+
+                        const receiverName =
+                          isDebit
+                            ? tx.toAccountHolderName || tx.counterPartyName || 'Recipient'
+                            : 'Self (My Account)';
+                        const receiverAcc = tx.toAccountNumber || tx.counterPartyAccountNumber || 'Self';
+
+                        const formattedAmt = Number(tx.amount || 0).toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        });
+
+                        const txStatus = (tx.status || tx.transactionStatus || 'SUCCESS').toUpperCase();
+
+                        return (
+                          <tr key={tx.referenceNumber || idx} className="hover:bg-slate-50/80 transition-colors">
+                            {/* Ref Number */}
+                            <td className="py-3.5 px-4 font-mono font-bold text-slate-600">
+                              <span title={tx.referenceNumber}>
+                                {tx.referenceNumber
+                                  ? tx.referenceNumber.length > 14
+                                    ? `${tx.referenceNumber.substring(0, 12)}…`
+                                    : tx.referenceNumber
+                                  : `#${idx + 1}`}
+                              </span>
+                            </td>
+
+                            {/* Flow / Type */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                    isDebit
+                                      ? 'bg-red-50 text-red-600'
+                                      : 'bg-emerald-50 text-emerald-600'
+                                  }`}
+                                >
+                                  {isDebit ? (
+                                    <FiArrowUpRight className="w-4 h-4" />
+                                  ) : (
+                                    <FiArrowDownLeft className="w-4 h-4" />
+                                  )}
+                                </div>
+                                <div>
+                                  <span
+                                    className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold ${
+                                      isDebit
+                                        ? 'bg-red-100/70 text-red-700'
+                                        : 'bg-emerald-100/70 text-emerald-700'
+                                    }`}
+                                  >
+                                    {isDebit ? 'DEBIT' : 'CREDIT'}
+                                  </span>
+                                  <span className="text-[10px] text-slate-500 font-semibold block">
+                                    {tx.transactionType || 'TRANSFER'}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* From (Sender) */}
+                            <td className="py-3.5 px-4">
+                              <div>
+                                <span className="font-bold text-navy-900 block">{senderName}</span>
+                                <span className="font-mono text-[11px] text-slate-500">
+                                  {senderAcc !== 'Self' ? `Acc: ${senderAcc}` : 'Sender Account'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* To (Recipient) */}
+                            <td className="py-3.5 px-4">
+                              <div>
+                                <span className="font-bold text-navy-900 block">{receiverName}</span>
+                                <span className="font-mono text-[11px] text-slate-500">
+                                  {receiverAcc !== 'Self' && receiverAcc !== 'N/A' && receiverAcc !== '-'
+                                    ? `Acc: ${receiverAcc}`
+                                    : 'Receiver Account'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Amount */}
+                            <td className="py-3.5 px-4 font-mono font-extrabold text-sm whitespace-nowrap">
+                              <span className={isDebit ? 'text-red-600' : 'text-emerald-600'}>
+                                {isDebit ? `- ₹${formattedAmt}` : `+ ₹${formattedAmt}`}
+                              </span>
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4">
+                              <Badge variant={txStatus}>{txStatus}</Badge>
+                            </td>
+
+                            {/* Date & Time */}
+                            <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
+                              {formatDate(tx.transactionDateTime)}
+                            </td>
+
+                            {/* Actions / View Receipt */}
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => openReceipt(tx)}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-coral-50 hover:text-coral-600 text-slate-700 rounded-lg font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer transition-colors border border-slate-200"
+                              >
+                                <FiEye className="w-3.5 h-3.5 text-coral-500" /> Receipt
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -389,64 +565,294 @@ const CustTransactions = () => {
           </div>
         )}
 
-        {/* TAB 2: Transfer Money Form */}
+        {/* ========================================================== */}
+        {/* TAB 2: TRANSFER MONEY FORM WITH BENEFICIARIES             */}
+        {/* ========================================================== */}
         {activeTab === 'transfer' && (
-          <div className="max-w-2xl">
-            <Card title="Initiate Fund Transfer" subtitle="Send money instantly to any verified Finix Bank account.">
-              <form onSubmit={handleSubmit(onTransferSubmit)} className="space-y-5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                    Source Account Type
-                  </label>
-                  <select
-                    {...register('accountType')}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Col: Saved Beneficiaries Quick Picker */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <FiUsers className="text-coral-500 w-4 h-4" /> Saved Beneficiaries
+                  </h3>
+                  <Link
+                    to="/customer/beneficiaries"
+                    className="text-[11px] font-bold text-coral-600 hover:text-coral-700 flex items-center gap-1"
                   >
-                    <option value="SAVINGS">Savings Account</option>
-                    <option value="CURRENT">Current Account</option>
-                  </select>
+                    Manage <FiArrowRight />
+                  </Link>
                 </div>
 
-                <Input
-                  label="Recipient 12-Digit Account Number"
-                  placeholder="e.g. 544900518923"
-                  error={errors.toAccount}
-                  {...register('toAccount')}
-                />
+                <p className="text-xs text-slate-500">
+                  Click any payee below to instantly auto-fill their 12-digit account number.
+                </p>
 
-                <Input
-                  label="Transfer Amount (₹)"
-                  type="number"
-                  step="0.01"
-                  placeholder="5000.00"
-                  error={errors.amount}
-                  {...register('amount')}
-                />
+                {beneficiariesLoading ? (
+                  <div className="p-6 text-center">
+                    <Spinner size="sm" className="text-coral-500 mx-auto" />
+                  </div>
+                ) : beneficiaries.length === 0 ? (
+                  <div className="p-6 text-center bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                    <FiUsers className="w-6 h-6 text-slate-400 mx-auto" />
+                    <p className="text-xs font-bold text-navy-900">No Beneficiaries Added Yet</p>
+                    <p className="text-[11px] text-slate-500">
+                      You can transfer by typing the account number directly or save frequent payees for quick access.
+                    </p>
+                    <Link to="/customer/beneficiaries" className="inline-block pt-1">
+                      <Button variant="outline" size="sm">
+                        + Add Beneficiary
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+                    {beneficiaries.map((b) => {
+                      const isSelected =
+                        selectedBeneficiary?.accountNumber === b.accountNumber;
+                      return (
+                        <div
+                          key={b.beneficiaryId || b.id || b.accountNumber}
+                          onClick={() => handleSelectBeneficiary(b)}
+                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? 'bg-coral-50/80 border-coral-500 shadow-xs'
+                              : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+                                isSelected
+                                  ? 'bg-coral-500 text-white shadow-xs'
+                                  : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {b.beneficiaryName?.charAt(0)?.toUpperCase() || 'P'}
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-navy-900">{b.beneficiaryName}</h4>
+                              <p className="text-[11px] font-mono text-slate-500">
+                                Acc: {b.accountNumber}
+                              </p>
+                              {b.ifscCode && (
+                                <span className="text-[10px] font-mono text-slate-400 uppercase">
+                                  IFSC: {b.ifscCode}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <span className="text-xs font-bold text-coral-600 flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-coral-200 shadow-2xs">
+                              <FiCheck /> Selected
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
 
-                <Input
-                  label="Reference / Transaction Note"
-                  placeholder="e.g. Monthly rent or vendor invoice"
-                  error={errors.remarks}
-                  {...register('remarks')}
-                />
+            {/* Right Col: Transfer Form */}
+            <div className="lg:col-span-7">
+              <Card
+                title="Initiate Instant Fund Transfer"
+                subtitle="Transfers are processed instantly 24/7 across all verified Finix Bank accounts."
+              >
+                <form onSubmit={handleSubmit(onTransferSubmit)} className="space-y-5">
+                  {/* Selected Beneficiary Indicator */}
+                  {selectedBeneficiary && (
+                    <div className="p-3 bg-coral-50/70 border border-coral-200 rounded-2xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <FiUserCheck className="text-coral-600 w-4 h-4" />
+                        <div>
+                          <span className="font-bold text-navy-900">Transferring to: </span>
+                          <span className="text-coral-700 font-semibold">{selectedBeneficiary.beneficiaryName}</span>
+                          <span className="font-mono text-slate-500 ml-1">({selectedBeneficiary.accountNumber})</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBeneficiary(null);
+                          setValue('toAccount', '');
+                        }}
+                        className="text-slate-400 hover:text-slate-600 font-bold text-xs cursor-pointer"
+                      >
+                        ✕ Clear
+                      </button>
+                    </div>
+                  )}
 
-                <div className="pt-3 border-t border-slate-100 flex justify-end">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="lg"
-                    isLoading={isSubmitting}
-                    disabled={!hasActiveAccount}
-                    icon={FiSend}
-                  >
-                    Confirm & Send Money
-                  </Button>
-                </div>
-              </form>
-            </Card>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                      Source Account Type
+                    </label>
+                    <select
+                      {...register('accountType')}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-coral-500"
+                    >
+                      <option value="SAVINGS">Savings Account</option>
+                      <option value="CURRENT">Current Account</option>
+                    </select>
+                  </div>
+
+                  <Input
+                    label="Recipient 12-Digit Account Number"
+                    placeholder="e.g. 544900518923"
+                    error={errors.toAccount}
+                    {...register('toAccount')}
+                  />
+
+                  <Input
+                    label="Transfer Amount (₹)"
+                    type="number"
+                    step="0.01"
+                    placeholder="5000.00"
+                    error={errors.amount}
+                    {...register('amount')}
+                  />
+
+                  <Input
+                    label="Reference Number / Tracking ID"
+                    placeholder="e.g. REF-12345678"
+                    error={errors.referenceNumber}
+                    {...register('referenceNumber')}
+                  />
+
+                  <Input
+                    label="Transaction Note / Remarks"
+                    placeholder="e.g. Monthly rent or vendor payment"
+                    error={errors.remarks}
+                    {...register('remarks')}
+                  />
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <p className="text-[11px] text-slate-400">
+                      ⚡ Instant settlement via Finix Real-Time Clearing
+                    </p>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      isLoading={isSubmitting}
+                      disabled={!hasActiveAccount}
+                      icon={FiSend}
+                    >
+                      Confirm & Send Money
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </div>
           </div>
         )}
       </div>
+
+      {/* ========================================================== */}
+      {/* TRANSACTION RECEIPT MODAL                                 */}
+      {/* ========================================================== */}
+      {selectedTx && (
+        <Modal
+          isOpen={receiptModalOpen}
+          onClose={() => setReceiptModalOpen(false)}
+          title="Transaction Receipt"
+          subtitle="Official confirmation of fund settlement."
+        >
+          <div className="space-y-6">
+            {/* Top Status Header */}
+            <div className="p-5 bg-gradient-to-br from-slate-900 to-navy-950 text-white rounded-2xl text-center space-y-2 border border-slate-800 shadow-md">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">
+                Total Transaction Amount
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-black font-mono text-coral-400">
+                ₹{Number(selectedTx.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </h3>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <Badge variant={selectedTx.status || selectedTx.transactionStatus || 'SUCCESS'}>
+                  {selectedTx.status || selectedTx.transactionStatus || 'SUCCESS'}
+                </Badge>
+                <span className="text-xs text-slate-300 font-semibold">
+                  • {selectedTx.transactionType || 'TRANSFER'}
+                </span>
+              </div>
+            </div>
+
+            {/* Key Metadata Table */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3 text-xs">
+              {/* Reference # */}
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Reference Number</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono font-bold text-navy-900">
+                    {selectedTx.referenceNumber || 'N/A'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyReference(selectedTx.referenceNumber)}
+                    className="p-1 text-slate-400 hover:text-coral-500 cursor-pointer"
+                    title="Copy Ref Number"
+                  >
+                    {copiedRef ? <FiCheck className="text-emerald-500" /> : <FiCopy />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Transaction Date */}
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">Date & Timestamp</span>
+                <span className="font-medium text-navy-900">
+                  {formatDate(selectedTx.transactionDateTime)}
+                </span>
+              </div>
+
+              {/* Sender Details */}
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">From (Sender)</span>
+                <div className="text-right">
+                  <span className="font-bold text-navy-900 block">
+                    {selectedTx.fromAccountHolderName || selectedTx.counterPartyName || 'Self (My Account)'}
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    Acc: {selectedTx.fromAccountNumber || 'Self'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Receiver Details */}
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+                <span className="text-slate-500 font-medium">To (Recipient)</span>
+                <div className="text-right">
+                  <span className="font-bold text-navy-900 block">
+                    {selectedTx.toAccountHolderName || selectedTx.counterPartyName || 'Self (My Account)'}
+                  </span>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    Acc: {selectedTx.toAccountNumber || selectedTx.counterPartyAccountNumber || 'Self'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-slate-500 font-medium">Remarks / Note</span>
+                <span className="font-semibold text-slate-800 text-right max-w-xs truncate">
+                  {selectedTx.remarks || 'None'}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="primary" size="sm" onClick={() => setReceiptModalOpen(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </CustomerLayout>
   );
 };
