@@ -40,4 +40,16 @@ public class GlobalExceptionHandler {
                 .body(new com.finix.auth.dto.ApiResponse("FORBIDDEN", ex.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<?> handleValidationException(org.springframework.web.bind.MethodArgumentNotValidException ex) {
+        String errorMsg = ex.getBindingResult().getFieldErrors().stream()
+                .map(org.springframework.validation.FieldError::getDefaultMessage)
+                .findFirst()
+                .orElse("Validation failed");
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new com.finix.auth.dto.ApiResponse("Failure", errorMsg));
+    }
+
 }

@@ -28,11 +28,17 @@ import Badge from '../../components/common/Badge';
 const kycSchema = yup.object().shape({
   aadharNum: yup
     .string()
-    .matches(/^[0-9]{12}$/, 'Aadhaar number must be exactly 12 digits')
+    .trim()
+    .matches(/^[0-9]{12}$/, 'Aadhaar number must be exactly 12 numeric digits')
     .required('Aadhaar number is required'),
   panNum: yup
     .string()
-    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN card format (e.g. ABCDE1234F)')
+    .trim()
+    .transform((val) => (val ? val.toUpperCase() : ''))
+    .matches(
+      /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
+      'Invalid PAN format. Must be 10 characters (e.g. ABCDE1234F: 5 uppercase letters, 4 digits, 1 uppercase letter)'
+    )
     .required('PAN card number is required'),
 });
 
@@ -147,8 +153,8 @@ const Kyc = () => {
       if (data.aadharNum && data.panNum) {
         try {
           await kycService.submitKyc({
-            aadharNum: data.aadharNum,
-            panNum: data.panNum,
+            aadharNum: data.aadharNum.trim(),
+            panNum: data.panNum.trim().toUpperCase(),
           });
         } catch (syncErr) {
           // Upload was already successful
@@ -256,17 +262,29 @@ const Kyc = () => {
                   <Input
                     label="Aadhaar Card Number (12 Digits)"
                     placeholder="123456789012"
+                    maxLength={12}
+                    className="font-mono tracking-wider"
                     icon={FiCreditCard}
                     error={errors.aadharNum}
-                    {...register('aadharNum')}
+                    {...register('aadharNum', {
+                      onChange: (e) => {
+                        e.target.value = e.target.value.replace(/\D/g, '');
+                      },
+                    })}
                   />
                   <Input
-                    label="PAN Card Number (10 Chars)"
+                    label="PAN Card Number (10 Characters)"
                     placeholder="ABCDE1234F"
-                    className="uppercase"
+                    maxLength={10}
+                    autoCapitalize="characters"
+                    className="uppercase font-mono tracking-wider"
                     icon={FiCreditCard}
                     error={errors.panNum}
-                    {...register('panNum')}
+                    {...register('panNum', {
+                      onChange: (e) => {
+                        e.target.value = e.target.value.toUpperCase();
+                      },
+                    })}
                   />
                 </div>
               </div>

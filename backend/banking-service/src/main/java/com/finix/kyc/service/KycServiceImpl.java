@@ -72,11 +72,19 @@ public class KycServiceImpl implements KycService {
 	    }
 
 	    if (request.getAadharNum() != null && !request.getAadharNum().isBlank()) {
-	        kyc.setAadharNum(request.getAadharNum());
+	        String formattedAadhar = request.getAadharNum().trim();
+	        if (!formattedAadhar.matches("^[0-9]{12}$")) {
+	            return ResponseEntity.badRequest().body(new ApiResponse("failure", "Aadhaar number must be exactly 12 numeric digits."));
+	        }
+	        kyc.setAadharNum(formattedAadhar);
 	    }
 
 	    if (request.getPanNum() != null && !request.getPanNum().isBlank()) {
-	        kyc.setPanNum(request.getPanNum());
+	        String formattedPan = request.getPanNum().trim().toUpperCase();
+	        if (!formattedPan.matches("^[A-Z]{5}[0-9]{4}[A-Z]$")) {
+	            return ResponseEntity.badRequest().body(new ApiResponse("failure", "Invalid PAN card format (e.g. ABCDE1234F). Must be 10 characters: 5 letters, 4 digits, 1 letter."));
+	        }
+	        kyc.setPanNum(formattedPan);
 	    }
 
 	    // Since documents changed, KYC should be verified again

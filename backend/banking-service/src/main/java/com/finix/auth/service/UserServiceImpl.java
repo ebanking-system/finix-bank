@@ -93,12 +93,34 @@ public class UserServiceImpl implements UserService {
 			User userEntity = userRepository.save(user);
 
 			if (registrationDto.getRole().equals(Role.CUSTOMER)) {
+				if (registrationDto.getPanNum() == null || registrationDto.getPanNum().isBlank()) {
+					return new ApiResponse("Failure", "PAN Card number is required for customer registration.");
+				}
+				if (registrationDto.getAadharNum() == null || registrationDto.getAadharNum().isBlank()) {
+					return new ApiResponse("Failure", "Aadhaar number is required for customer registration.");
+				}
+
+				String formattedPan = registrationDto.getPanNum().trim().toUpperCase();
+				String formattedAadhar = registrationDto.getAadharNum().trim();
+
+				if (!formattedPan.matches("^[A-Z]{5}[0-9]{4}[A-Z]$")) {
+					return new ApiResponse("Failure", "Invalid PAN card format (e.g. ABCDE1234F). Must be 10 characters: 5 letters, 4 digits, 1 letter.");
+				}
+				if (!formattedAadhar.matches("^[0-9]{12}$")) {
+					return new ApiResponse("Failure", "Invalid Aadhaar number format. Must be exactly 12 numeric digits.");
+				}
+
+				registrationDto.setPanNum(formattedPan);
+				registrationDto.setAadharNum(formattedAadhar);
+
 				Customer customer = mapper.map(registrationDto, Customer.class);
 				customer.setUser(userEntity);
 				Customer savedCustomer = customerRepository.save(customer);
 
 				KycDocuments kycEntity = mapper.map(registrationDto, KycDocuments.class);
 				kycEntity.setCustomer(savedCustomer);
+				kycEntity.setPanNum(formattedPan);
+				kycEntity.setAadharNum(formattedAadhar);
 				kycEntity.setStatus(Status.PENDING);
 				kycEntity.setSubmittedDate(LocalDateTime.now());
 				kycDocumentRepository.save(kycEntity);
