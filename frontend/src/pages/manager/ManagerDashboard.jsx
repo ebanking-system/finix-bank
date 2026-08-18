@@ -1254,7 +1254,7 @@ const ManagerDashboard = () => {
                     <Input
                       label="Work Email Address"
                       type="email"
-                      placeholder="jane.smith@finixbank.com"
+                      placeholder="employee@finixbank.com"
                       icon={FiMail}
                       error={errorsEmp.email}
                       {...registerEmp('email')}

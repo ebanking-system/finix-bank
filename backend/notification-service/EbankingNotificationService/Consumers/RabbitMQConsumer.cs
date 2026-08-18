@@ -1,4 +1,4 @@
-﻿using EbankingNotificationService.Data;
+using EbankingNotificationService.Data;
 using EbankingNotificationService.DTOs;
 using EbankingNotificationService.Models;
 using EbankingNotificationService.Services;
@@ -29,6 +29,9 @@ namespace EbankingNotificationService.Consumers
         protected override async Task ExecuteAsync(
             CancellationToken stoppingToken)
         {
+            var queueName =
+                _configuration["RabbitMQ:QueueName"]!;
+
             var factory = new ConnectionFactory
             {
                 HostName = _configuration["RabbitMQ:HostName"]!,
@@ -37,26 +40,48 @@ namespace EbankingNotificationService.Consumers
                 Password = _configuration["RabbitMQ:Password"]!
             };
 
-            _connection =
-                await factory.CreateConnectionAsync(stoppingToken);
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    _connection =
+                        await factory.CreateConnectionAsync(stoppingToken);
 
-            _channel =
-                await _connection.CreateChannelAsync(
-                    cancellationToken: stoppingToken);
+                    _channel =
+                        await _connection.CreateChannelAsync(
+                            cancellationToken: stoppingToken);
 
-            var queueName =
-                _configuration["RabbitMQ:QueueName"]!;
+                    await _channel.QueueDeclareAsync(
+                        queue: queueName,
+                        durable: true,
+                        exclusive: false,
+                        autoDelete: false,
+                        arguments: null,
+                        cancellationToken: stoppingToken);
 
-            await _channel.QueueDeclareAsync(
-                queue: queueName,
-                durable: true,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null,
-                cancellationToken: stoppingToken);
+                    Console.WriteLine(
+                        $"Successfully connected to RabbitMQ. Waiting for messages from: {queueName}");
+                    break;
+                }
+                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+                {
+                    Console.WriteLine($"RabbitMQ not ready yet ({ex.Message}). Retrying in 3 seconds...");
+                    try
+                    {
+                        await Task.Delay(3000, stoppingToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                }
+            }
 
-            Console.WriteLine(
-                $"Waiting for messages from: {queueName}");
+            if (_channel == null)
+            {
+                Console.WriteLine("Failed to connect to RabbitMQ after max retries.");
+                return;
+            }
 
             var consumer =
                 new AsyncEventingBasicConsumer(_channel);

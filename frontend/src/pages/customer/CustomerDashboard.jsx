@@ -95,7 +95,7 @@ const CustomerDashboard = () => {
                 Welcome back, <span className="text-coral-400">{customerName}</span> 👋
               </h1>
               <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-                Manage your zero-balance digital accounts, perform 24/7 instant wire transfers, track loan EMIs, and verify digital KYC.
+                Manage your zero-balance digital accounts, perform 24/7 instant money transfers, track loan EMIs, and verify digital KYC.
               </p>
             </div>
 
@@ -106,7 +106,7 @@ const CustomerDashboard = () => {
                 </Button>
               </Link>
               <Link to="/customer/accounts">
-                <Button variant="outline" size="lg" icon={FiPlusCircle} className="border-slate-700 text-white hover:bg-slate-800">
+                <Button variant="dark-outline" size="lg" icon={FiPlusCircle}>
                   Open Account
                 </Button>
               </Link>
@@ -187,7 +187,7 @@ const CustomerDashboard = () => {
                   Identity Verified & Account Active <Badge variant="ACTIVE">VERIFIED</Badge>
                 </h2>
                 <p className="text-xs text-slate-600">
-                  Your KYC is approved! You can perform 24/7 instant wire transfers, request debit cards, and book fixed deposits.
+                  Your KYC is approved! You can perform 24/7 instant money transfers, request debit cards, and book fixed deposits.
                 </p>
               </div>
             </div>
@@ -213,7 +213,7 @@ const CustomerDashboard = () => {
               </div>
               <div>
                 <span className="block text-sm font-bold text-navy-900">Transfer Money</span>
-                <span className="text-xs text-slate-500">Instant wire & NEFT</span>
+                <span className="text-xs text-slate-500">Instant fund transfers</span>
               </div>
             </Link>
 
@@ -264,7 +264,7 @@ const CustomerDashboard = () => {
           
           <Card
             title="Savings Account Balance"
-            subtitle="GET /api/accounts/balance?accountType=SAVINGS"
+            subtitle="Primary digital savings account"
             action={<Badge variant="SAVINGS">SAVINGS</Badge>}
           >
             <div className="space-y-3">
@@ -281,7 +281,7 @@ const CustomerDashboard = () => {
 
           <Card
             title="Current Account Balance"
-            subtitle="GET /api/accounts/balance?accountType=CURRENT"
+            subtitle="Business & everyday operations account"
             action={<Badge variant="CURRENT">CURRENT</Badge>}
           >
             <div className="space-y-3">
@@ -309,7 +309,7 @@ const CustomerDashboard = () => {
                   : 'Submit your Aadhaar, PAN, and facial self-image to unlock account activation and full limits.'}
               </p>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-400 flex items-center gap-1"><FiShield className="text-emerald-500" /> 256-Bit Encrypted</span>
+                <span className="text-slate-400 flex items-center gap-1"><FiShield className="text-emerald-500" /> Identity Verified</span>
                 <Link to="/customer/kyc" className="font-bold text-coral-500 hover:underline">
                   {isKycApproved ? 'View KYC Status →' : 'Submit KYC →'}
                 </Link>
@@ -321,16 +321,16 @@ const CustomerDashboard = () => {
 
         {/* Active Accounts Overview Section */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
               <h2 className="text-lg font-bold text-navy-900 flex items-center gap-2">
                 <FiCreditCard className="text-coral-500" /> My Bank Accounts ({accounts.length})
               </h2>
               <p className="text-xs text-slate-500">
-                List fetched from GET /api/accounts/customer/{userId}
+                Your active checking and savings accounts
               </p>
             </div>
-            <Link to="/customer/accounts">
+            <Link to="/customer/accounts" className="self-start sm:self-auto">
               <Button variant="primary" size="sm" icon={FiPlusCircle}>
                 Open New Account
               </Button>
@@ -359,10 +359,10 @@ const CustomerDashboard = () => {
               {accounts.map((acc, idx) => (
                 <div
                   key={acc.id || idx}
-                  className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4"
+                  className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={acc.accountType}>{acc.accountType}</Badge>
                       <Badge variant={acc.status || 'ACTIVE'}>{acc.status || 'ACTIVE'}</Badge>
                       <span className="text-xs font-mono font-bold text-navy-900">
@@ -371,7 +371,7 @@ const CustomerDashboard = () => {
                     </div>
                     <p className="text-xs text-slate-500">IFSC: {acc.ifscCode || 'FINX0000001'}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
                     <span className="block text-[10px] text-slate-400 uppercase font-semibold">Balance</span>
                     <span className="text-base font-extrabold text-emerald-600">
                       ₹{acc.balance !== undefined ? Number(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : balances[acc.accountType] || '0.00'}

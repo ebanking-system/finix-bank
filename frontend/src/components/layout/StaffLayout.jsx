@@ -3,8 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiShield,
   FiUserCheck,
-  FiFileText,
-  FiUserPlus,
   FiLogOut,
   FiMenu,
   FiX,
@@ -12,7 +10,6 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
-import Badge from '../common/Badge';
 import FinixBotWidget from '../common/FinixBotWidget';
 
 const StaffLayout = ({ children, title, subtitle }) => {
@@ -114,12 +111,11 @@ const StaffLayout = ({ children, title, subtitle }) => {
           </div>
 
           <Button
-            variant="outline"
+            variant="dark-outline"
             fullWidth
             size="sm"
             onClick={handleLogout}
             icon={FiLogOut}
-            className="border-navy-800 text-slate-300 hover:bg-navy-900 hover:text-white"
           >
             Sign Out
           </Button>

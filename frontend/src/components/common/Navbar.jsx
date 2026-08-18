@@ -51,13 +51,13 @@ const Navbar = () => {
             <Link to="/" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
               Home
             </Link>
-            <a href="#features" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+            <a href="/#features" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
               Features
             </a>
-            <a href="#security" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+            <a href="/#security" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
               Security
             </a>
-            <a href="#contact" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+            <a href="/#contact" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
               Contact
             </a>
           </nav>
@@ -71,7 +71,12 @@ const Navbar = () => {
                     My Dashboard
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" onClick={handleLogout} icon={FiLogOut} className="border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white">
+                <Button
+                  variant="dark-outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  icon={FiLogOut}
+                >
                   Sign Out
                 </Button>
               </>
@@ -116,18 +121,25 @@ const Navbar = () => {
             Home
           </Link>
           <a
-            href="#features"
+            href="/#features"
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-navy-800"
           >
             Features
           </a>
           <a
-            href="#security"
+            href="/#security"
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-navy-800"
           >
             Security
+          </a>
+          <a
+            href="/#contact"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-navy-800"
+          >
+            Contact
           </a>
           <div className="pt-4 border-t border-navy-800 flex flex-col gap-3">
             {isAuthenticated ? (
@@ -137,7 +149,12 @@ const Navbar = () => {
                     Go to Dashboard
                   </Button>
                 </Link>
-                <Button variant="outline" fullWidth onClick={handleLogout} icon={FiLogOut}>
+                <Button
+                  variant="dark-outline"
+                  fullWidth
+                  onClick={handleLogout}
+                  icon={FiLogOut}
+                >
                   Sign Out
                 </Button>
               </>

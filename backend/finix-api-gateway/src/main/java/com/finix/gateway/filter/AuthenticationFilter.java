@@ -60,11 +60,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 Claims claims =
                         jwtUtil.validateToken(token);
 
-                String userId =
-                        claims.get("userId", String.class);
+                Object userIdObj = claims.get("user_id") != null ? claims.get("user_id") : claims.get("userId");
+                String userId = userIdObj != null ? String.valueOf(userIdObj) : "";
 
-                String role =
-                        claims.get("role", String.class);
+                Object roleObj = claims.get("user_role") != null ? claims.get("user_role") : claims.get("role");
+                String role = roleObj != null ? String.valueOf(roleObj) : "";
 
                 String email =
                         claims.getSubject();
