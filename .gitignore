@@ -1,49 +1,93 @@
-# --- Java / Maven (banking-service) ---
+# ==========================================================
+# Finix Bank - Global .gitignore
+# ==========================================================
+
+# --- Environment & Secret Files ---
+.env
+.env.*
+.env.local
+!.env.example
+!**/.env.example
+application-local.yml
+application-local.properties
+
+# --- Java & Maven (banking-service, eureka, gateway) ---
 target/
+**/target/
 *.class
 *.jar
+*.war
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.properties
 
-# --- IDE ---
-.idea/
-*.iml
-.vscode/
-.settings/
-.classpath
-.project
-.factorypath
-.metadata
+# --- Python & FastAPI (finixbot-service) ---
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+chroma_db/
+**/chroma_db/
 
-# --- OS ---
-.DS_Store
-Thumbs.db
+# --- .NET 10 / C# (notification-service) ---
+bin/
+**/bin/
+obj/
+**/obj/
+.vs/
+**/.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
 
-# --- Env / secrets ---
-.env
-.env.local
-application-local.yml
-application-local.properties
-
-# --- Node / React + Vite (frontend) ---
-frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
-frontend/.env
-frontend/.env.local
-frontend/.env.development
-frontend/.env.production
+# --- Node / React & Vite (frontend) ---
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# --- Runtime Uploads & User Files ---
+uploads/
+**/uploads/
+
 # --- Logs ---
 *.log
 logs/
+**/logs/
 
-# --- Notification service (.NET) ---
-backend/notification-service/EbankingNotificationService/bin/
-backend/notification-service/EbankingNotificationService/obj/
-backend/notification-service/.vs/
+# --- IDEs & Editors ---
+.idea/
+**/.idea/
+*.iml
+.vscode/
+**/.vscode/
+.settings/
+**/.settings/
+.classpath
+.project
+.factorypath
+.metadata
+
+# --- Operating System Files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

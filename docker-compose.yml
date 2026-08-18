@@ -224,6 +224,13 @@ services:
       RabbitMQ__UserName: "guest"
       RabbitMQ__Password: "guest"
       RabbitMQ__QueueName: "notification.queue"
+      EmailSettings__SmtpServer: "${SMTP_HOST:-smtp.gmail.com}"
+      EmailSettings__Port: "${SMTP_PORT:-587}"
+      EmailSettings__SenderEmail: "${SMTP_USERNAME:-}"
+      EmailSettings__AppPassword: "${SMTP_PASSWORD:-}"
+      EmailSettings__SenderName: "${SMTP_FROM_NAME:-Finix Bank}"
+      EmailSettings__FromAddress: "${SMTP_FROM_ADDRESS:-}"
+
     networks:
       - finix-network
     deploy:

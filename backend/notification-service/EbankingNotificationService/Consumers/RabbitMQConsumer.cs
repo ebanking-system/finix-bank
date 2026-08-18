@@ -149,30 +149,38 @@ namespace EbankingNotificationService.Consumers
                     {
                         if (string.IsNullOrWhiteSpace(notificationEvent.Email))
                         {
-                            throw new Exception(
-                                "Email address is required.");
+                            Console.WriteLine(
+                                $"[RabbitMQConsumer] Skipping email dispatch for customer #{notificationEvent.CustomerId}: No email address provided in payload.");
                         }
+                        else
+                        {
+                            try
+                            {
+                                using var scope =
+                                    _scopeFactory.CreateScope();
 
-                        using var scope =
-                            _scopeFactory.CreateScope();
+                                var emailService =
+                                    scope.ServiceProvider
+                                        .GetRequiredService<IEmailService>();
 
-                        var emailService =
-                            scope.ServiceProvider
-                                .GetRequiredService<IEmailService>();
-
-                        await emailService.SendEmailAsync(
-                            notificationEvent.Email,
-                            notificationEvent.Title,
-                            notificationEvent.Message);
-
-                        Console.WriteLine(
-                            $"Email sent to {notificationEvent.Email}");
+                                await emailService.SendEmailAsync(
+                                    notificationEvent.Email,
+                                    notificationEvent.Title,
+                                    notificationEvent.Message);
+                            }
+                            catch (Exception emailEx)
+                            {
+                                Console.WriteLine(
+                                    $"[RabbitMQConsumer ERROR] Error during email dispatch to {notificationEvent.Email}: {emailEx.Message}");
+                            }
+                        }
                     }
 
-                    // ACK
+                    // ACK Message
                     await _channel.BasicAckAsync(
                         eventArgs.DeliveryTag,
                         false);
+
                 }
                 catch (Exception ex)
                 {
