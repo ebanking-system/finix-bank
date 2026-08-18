@@ -38,6 +38,7 @@ const EmployeeProfile = () => {
 
   // Photo Upload State
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoTimestamp, setPhotoTimestamp] = useState(Date.now());
 
   // Password Change Form State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -111,6 +112,7 @@ const EmployeeProfile = () => {
       const resp = await employeeService.uploadProfilePhoto(file);
       const updated = resp?.data || resp;
       setProfile((prev) => ({ ...prev, ...updated }));
+      setPhotoTimestamp(Date.now());
       toast.success('Profile photo updated successfully!');
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to upload photo.';
@@ -169,11 +171,18 @@ const EmployeeProfile = () => {
     }
   };
 
-  const photoUrl = employeeService.getEmployeePhotoUrl(profile?.employeeId, profile?.profilePhotoPath);
+  const isManager = userRole === 'MANAGER';
+  const rawPhotoUrl = employeeService.getEmployeePhotoUrl(profile?.employeeId, profile?.profilePhotoPath);
+  const photoUrl = rawPhotoUrl ? `${rawPhotoUrl}?t=${photoTimestamp}` : null;
+
+  const pageTitle = isManager ? 'Executive Manager Profile' : 'My Staff Profile';
+  const pageSubtitle = isManager
+    ? 'Manage your executive credentials, manager avatar photo, and account security credentials.'
+    : 'Manage your personal details, profile picture, and account security credentials.';
 
   if (loading) {
     return (
-      <StaffLayout title="My Staff Profile" subtitle="Loading employee information...">
+      <StaffLayout title={pageTitle} subtitle="Loading profile information...">
         <div className="bg-white rounded-3xl p-12 border border-slate-200 shadow-xs text-center space-y-3">
           <Spinner size="lg" className="text-coral-500 mx-auto" />
           <p className="text-sm font-medium text-slate-600">Retrieving profile...</p>
@@ -184,8 +193,8 @@ const EmployeeProfile = () => {
 
   return (
     <StaffLayout
-      title="My Staff Profile"
-      subtitle="Manage your personal details, profile picture, and account security credentials."
+      title={pageTitle}
+      subtitle={pageSubtitle}
     >
       <div className="space-y-8">
         {/* Top Header Card */}
@@ -196,6 +205,7 @@ const EmployeeProfile = () => {
               <div className="w-24 h-24 rounded-3xl overflow-hidden bg-navy-900 text-white flex items-center justify-center border-4 border-slate-100 shadow-md">
                 {photoUrl ? (
                   <img
+                    key={photoUrl}
                     src={photoUrl}
                     alt="Staff Avatar"
                     className="w-full h-full object-cover"
@@ -204,8 +214,8 @@ const EmployeeProfile = () => {
                     }}
                   />
                 ) : (
-                  <span className="text-2xl font-extrabold">
-                    {profile?.firstName ? profile.firstName[0] : 'S'}
+                  <span className="text-2xl font-extrabold text-coral-400">
+                    {profile?.firstName ? profile.firstName[0] : isManager ? 'M' : 'S'}
                     {profile?.lastName ? profile.lastName[0] : ''}
                   </span>
                 )}
@@ -233,12 +243,12 @@ const EmployeeProfile = () => {
                 <h2 className="text-xl font-bold text-navy-900">
                   {profile?.firstName} {profile?.middleName ? `${profile.middleName} ` : ''}{profile?.lastName}
                 </h2>
-                <Badge variant={profile?.department || 'EMPLOYEE'}>
-                  {profile?.department || 'OPERATIONS'}
+                <Badge variant={isManager ? 'MANAGER' : (profile?.department || 'EMPLOYEE')}>
+                  {isManager ? 'EXECUTIVE MANAGEMENT' : (profile?.department || 'OPERATIONS')}
                 </Badge>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Designation: <span className="font-semibold text-slate-700">{profile?.designation?.replace(/_/g, ' ') || 'Staff Member'}</span>
+                Designation: <span className="font-semibold text-slate-700">{profile?.designation ? profile.designation.replace(/_/g, ' ') : userRole}</span>
               </p>
               <p className="text-xs text-slate-500">
                 Staff ID: <span className="font-mono font-bold text-navy-900">#{profile?.employeeId || userId}</span>

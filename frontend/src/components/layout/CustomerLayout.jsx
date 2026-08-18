@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiHome,
@@ -16,6 +16,7 @@ import {
   FiTrendingUp,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
+import { customerService } from '../../services/customerService';
 import Button from '../common/Button';
 import FinixBotWidget from '../common/FinixBotWidget';
 
@@ -33,14 +34,27 @@ const navItems = [
 
 const CustomerLayout = ({ children, title, subtitle }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, userId } = useAuth();
+
+  useEffect(() => {
+    customerService.getProfile().then((data) => {
+      if (data) setProfile(data);
+    }).catch(() => {});
+  }, [userId]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  const customerName = profile
+    ? [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+    : 'Customer Account';
+  const customerInitial = profile?.firstName?.charAt(0)?.toUpperCase() || 'C';
+
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row relative">
@@ -115,15 +129,21 @@ const CustomerLayout = ({ children, title, subtitle }) => {
 
         {/* User Info & Sign Out Footer */}
         <div className="p-6 border-t border-navy-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-navy-800 border border-navy-700 text-slate-200 flex items-center justify-center font-bold text-sm">
-              #{userId ? String(userId).slice(-2) : 'C'}
+          <Link
+            to="/customer/profile"
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-navy-850 transition-colors group cursor-pointer"
+            title="View Profile"
+          >
+            <div className="w-10 h-10 rounded-xl bg-coral-500 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-coral-500/20 group-hover:scale-105 transition-transform shrink-0">
+              {customerInitial}
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">Customer Account</p>
-              <p className="text-[11px] text-slate-400 truncate">ID: #{userId}</p>
+              <p className="text-xs font-bold text-white truncate group-hover:text-coral-400 transition-colors">
+                {customerName}
+              </p>
+              <p className="text-[11px] text-slate-400 truncate">Customer ID: #{userId}</p>
             </div>
-          </div>
+          </Link>
 
           <Button
             variant="dark-outline"

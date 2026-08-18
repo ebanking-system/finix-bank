@@ -83,8 +83,12 @@ export const employeeService = {
    */
   getEmployeePhotoUrl(employeeId, photoPath) {
     if (!photoPath || !employeeId) return null;
-    const fileName = photoPath.split('/').pop().split('\\').pop();
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    if (typeof photoPath === 'string' && (photoPath.startsWith('http://') || photoPath.startsWith('https://'))) {
+      return photoPath;
+    }
+    const fileName = String(photoPath).replace(/\\/g, '/').split('/').pop();
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090';
     return `${baseUrl}/api/employees/photo/${employeeId}/${fileName}`;
   },
 };
+

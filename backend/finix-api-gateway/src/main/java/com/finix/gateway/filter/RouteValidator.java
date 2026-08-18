@@ -22,6 +22,7 @@ public class RouteValidator {
             "/api/auth/signup",
             "/api/employees/signup",
             "/api/kyc/files",
+            "/api/employees/photo",
 
             "/swagger-ui",
 
@@ -29,6 +30,7 @@ public class RouteValidator {
 
             "/actuator"
     );
+
 
     /**
      * Returns TRUE if API is secured.

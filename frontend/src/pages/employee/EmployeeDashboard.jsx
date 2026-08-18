@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   FiUserCheck,
@@ -370,6 +371,8 @@ const EmployeeDashboard = () => {
   const deptLabel = profile?.department || 'Operations';
   const desigLabel = profile?.designation?.replace(/_/g, ' ') || 'Staff Member';
 
+  const photoUrl = employeeService.getEmployeePhotoUrl(profile?.employeeId, profile?.profilePhotoPath);
+
   return (
     <StaffLayout
       title={`Operations Desk — ${deptLabel}`}
@@ -378,10 +381,27 @@ const EmployeeDashboard = () => {
       <div className="space-y-8">
         {/* Department Banner */}
         <div className="bg-gradient-to-r from-navy-900 to-navy-800 text-white p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-navy-700 shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-coral-500 flex items-center justify-center text-white">
-              <FiBriefcase className="w-5 h-5" />
-            </div>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/employee/profile"
+              className="w-12 h-12 rounded-2xl overflow-hidden bg-navy-800 border-2 border-coral-500/80 hover:border-coral-400 flex items-center justify-center text-white shrink-0 shadow-sm transition-all group cursor-pointer"
+              title="Click to view & edit profile"
+            >
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Staff Avatar"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <span className="font-bold text-base text-coral-400 group-hover:scale-110 transition-transform">
+                  {profile?.firstName ? profile.firstName[0] : 'E'}
+                </span>
+              )}
+            </Link>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-white">{profile?.firstName} {profile?.lastName}</span>
@@ -390,10 +410,19 @@ const EmployeeDashboard = () => {
               <p className="text-xs text-slate-300">Designation: <span className="font-semibold text-white">{desigLabel}</span></p>
             </div>
           </div>
-          <div className="text-xs text-slate-400 bg-navy-950/60 px-3 py-1.5 rounded-xl border border-navy-800 self-start sm:self-auto">
-            Operational Scope: <span className="font-semibold text-emerald-400">{isKycOfficer && isLoanOfficer ? 'All Modules (Executive)' : isKycOfficer ? 'KYC Compliance' : isLoanOfficer ? 'Lending & Underwriting' : profile?.department}</span>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <Link
+              to="/employee/profile"
+              className="text-xs px-3 py-1.5 bg-navy-800 hover:bg-navy-700 text-slate-200 hover:text-white rounded-xl border border-navy-700 transition-colors flex items-center gap-1.5 font-medium"
+            >
+              <FiUserCheck className="w-3.5 h-3.5 text-coral-400" /> My Profile
+            </Link>
+            <div className="text-xs text-slate-400 bg-navy-950/60 px-3 py-1.5 rounded-xl border border-navy-800">
+              Operational Scope: <span className="font-semibold text-emerald-400">{isKycOfficer && isLoanOfficer ? 'All Modules (Executive)' : isKycOfficer ? 'KYC Compliance' : isLoanOfficer ? 'Lending & Underwriting' : profile?.department}</span>
+            </div>
           </div>
         </div>
+
 
         {/* ========================================================== */}
         {/* CONDITION 1: KYC OFFICER SECTIONS                         */}

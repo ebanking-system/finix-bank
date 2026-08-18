@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -28,6 +29,8 @@ import {
   FiFileText,
   FiUserCheck,
   FiAlertTriangle,
+  FiUser,
+  FiCamera,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -35,7 +38,7 @@ import { loanTypeService } from '../../services/loanTypeService';
 import { employeeService } from '../../services/employeeService';
 import { loanService } from '../../services/loanService';
 import { kycService } from '../../services/kycService';
-import Navbar from '../../components/common/Navbar';
+import StaffLayout from '../../components/layout/StaffLayout';
 import Card from '../../components/common/Card';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -86,7 +89,28 @@ const loanTypeSchema = yup.object().shape({
 
 const ManagerDashboard = () => {
   const { userId } = useAuth();
-  const [activeTab, setActiveTab] = useState('loans'); // 'loans' | 'kyc' | 'loan-types' | 'employee-roster' | 'register-employee'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'loans');
+  const [managerProfile, setManagerProfile] = useState(null);
+
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
+
+  useEffect(() => {
+    employeeService.getMyProfile().then((res) => {
+      setManagerProfile(res?.data || res);
+    }).catch(() => {});
+  }, [userId]);
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setSearchParams({ tab: newTab });
+  };
+
 
   // Document Inspection Modal State
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -525,78 +549,121 @@ const ManagerDashboard = () => {
   const countApprovedKyc = allKycList.filter((k) => (k.status || '').toUpperCase() === 'APPROVED').length;
   const countRejectedKyc = allKycList.filter((k) => (k.status || '').toUpperCase() === 'REJECTED').length;
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Navbar />
+  const managerPhotoUrl = employeeService.getEmployeePhotoUrl(managerProfile?.employeeId || userId, managerProfile?.profilePhotoPath);
+  const managerFullName = managerProfile
+    ? [managerProfile.firstName, managerProfile.lastName].filter(Boolean).join(' ')
+    : 'Branch Manager';
 
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-8 lg:px-12 xl:px-16 py-8 space-y-6">
-        {/* Manager Header */}
-        <div className="bg-navy-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-navy-800">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="MANAGER">EXECUTIVE MANAGER CONSOLE</Badge>
-              <span className="text-xs font-mono text-slate-400">Manager ID: #{userId}</span>
+  return (
+    <StaffLayout
+      title="Enterprise Banking Operations"
+      subtitle="Executive oversight across loans underwriting, KYC compliance, product catalog, and staff management."
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+    >
+      <div className="space-y-6">
+        {/* Manager Header Banner with Profile Photo */}
+        <div className="bg-gradient-to-r from-navy-950 via-navy-900 to-navy-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-navy-800">
+          <div className="flex items-center gap-5">
+            {/* Manager Photo Avatar */}
+            <Link
+              to="/manager/profile"
+              className="w-16 h-16 rounded-2xl overflow-hidden bg-navy-800 border-2 border-coral-500 hover:border-coral-400 flex items-center justify-center text-white shrink-0 shadow-lg transition-all group cursor-pointer"
+              title="Click to view & edit Manager profile"
+            >
+              {managerPhotoUrl ? (
+                <img
+                  src={managerPhotoUrl}
+                  alt={managerFullName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <span className="font-extrabold text-xl text-coral-400 group-hover:scale-110 transition-transform">
+                  {managerProfile?.firstName ? managerProfile.firstName[0] : 'M'}
+                </span>
+              )}
+            </Link>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="MANAGER">EXECUTIVE MANAGER</Badge>
+                <span className="text-xs font-mono text-slate-400">ID: #{userId}</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">{managerFullName}</h1>
+              <p className="text-xs sm:text-sm text-slate-300">
+                Full executive oversight across underwriting, compliance, catalog, and staff.
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Enterprise Banking Operations</h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Full executive oversight across loans underwriting, KYC compliance, product catalog, and staff management.
-            </p>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex flex-wrap bg-navy-800/90 p-1.5 rounded-2xl border border-navy-700/80 gap-1.5 shrink-0">
-            <button
-              onClick={() => setActiveTab('loans')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'loans'
-                  ? 'bg-coral-500 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-navy-700/50'
-              }`}
-            >
-              <FiDollarSign className="w-4 h-4" /> Loan Applications ({countPendingLoans > 0 ? `${countPendingLoans} pending` : allLoansList.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('kyc')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'kyc'
-                  ? 'bg-coral-500 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-navy-700/50'
-              }`}
-            >
-              <FiUserCheck className="w-4 h-4" /> KYC Verification ({countPendingKyc > 0 ? `${countPendingKyc} pending` : allKycList.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('loan-types')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'loan-types'
-                  ? 'bg-coral-500 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-navy-700/50'
-              }`}
-            >
-              <FiList className="w-4 h-4" /> Loan Catalog
-            </button>
-            <button
-              onClick={() => setActiveTab('employee-roster')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'employee-roster'
-                  ? 'bg-coral-500 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-navy-700/50'
-              }`}
-            >
-              <FiUsers className="w-4 h-4" /> Staff Roster ({employees.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('register-employee')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeTab === 'register-employee'
-                  ? 'bg-coral-500 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-navy-700/50'
-              }`}
-            >
-              <FiUserPlus className="w-4 h-4" /> Onboard Staff
-            </button>
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <Link to="/manager/profile">
+              <button
+                type="button"
+                className="px-4 py-2 bg-navy-800 hover:bg-navy-700 text-white text-xs font-bold rounded-xl border border-navy-700 transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <FiUser className="text-coral-400 w-4 h-4" /> Manager Profile
+              </button>
+            </Link>
           </div>
         </div>
+
+        {/* Navigation Tabs Pill Bar */}
+        <div className="flex flex-wrap bg-white p-2 rounded-2xl border border-slate-200 shadow-xs gap-2">
+          <button
+            onClick={() => handleTabChange('loans')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'loans'
+                ? 'bg-coral-500 text-white shadow-md shadow-coral-500/20'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-navy-900'
+            }`}
+          >
+            <FiDollarSign className="w-4 h-4" /> Loan Applications ({countPendingLoans > 0 ? `${countPendingLoans} pending` : allLoansList.length})
+          </button>
+          <button
+            onClick={() => handleTabChange('kyc')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'kyc'
+                ? 'bg-coral-500 text-white shadow-md shadow-coral-500/20'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-navy-900'
+            }`}
+          >
+            <FiUserCheck className="w-4 h-4" /> KYC Verification ({countPendingKyc > 0 ? `${countPendingKyc} pending` : allKycList.length})
+          </button>
+          <button
+            onClick={() => handleTabChange('loan-types')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'loan-types'
+                ? 'bg-coral-500 text-white shadow-md shadow-coral-500/20'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-navy-900'
+            }`}
+          >
+            <FiList className="w-4 h-4" /> Loan Catalog ({loanTypes.length})
+          </button>
+          <button
+            onClick={() => handleTabChange('employee-roster')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'employee-roster'
+                ? 'bg-coral-500 text-white shadow-md shadow-coral-500/20'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-navy-900'
+            }`}
+          >
+            <FiUsers className="w-4 h-4" /> Staff Roster ({employees.length})
+          </button>
+          <button
+            onClick={() => handleTabChange('register-employee')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'register-employee'
+                ? 'bg-coral-500 text-white shadow-md shadow-coral-500/20'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-navy-900'
+            }`}
+          >
+            <FiUserPlus className="w-4 h-4" /> Onboard Staff
+          </button>
+        </div>
+
 
         {/* TAB 1: Loan Applications Operations (Manager Override Enabled) */}
         {activeTab === 'loans' && (
@@ -1328,7 +1395,8 @@ const ManagerDashboard = () => {
             </form>
           </div>
         )}
-      </main>
+      </div>
+
 
       {/* Document Preview Modal */}
       <DocumentPreviewModal
@@ -1575,8 +1643,9 @@ const ManagerDashboard = () => {
           </div>
         </form>
       </Modal>
-    </div>
+    </StaffLayout>
   );
 };
 
 export default ManagerDashboard;
+
