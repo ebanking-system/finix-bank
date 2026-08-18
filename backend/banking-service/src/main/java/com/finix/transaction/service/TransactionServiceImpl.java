@@ -200,9 +200,19 @@ public class TransactionServiceImpl implements TransactionService{
 			transaction.setToAccount(toAccount);
 			transaction.setAmount(transactionDto.getAmount());
 			transaction.setTransactionType(TransactionType.TRANSFER);
-			transaction.setReferenceNumber(UUID.randomUUID().toString());//universally unique identifier (UUID
+			
+			String ref = transactionDto.getReferenceNumber();
+			if (ref == null || ref.isBlank()) {
+				ref = UUID.randomUUID().toString();
+			}
+			transaction.setReferenceNumber(ref);
 			transaction.setStatus(status);
-			transaction.setRemarks(remarks);
+			
+			String rem = transactionDto.getRemarks();
+			if (rem == null || rem.isBlank()) {
+				rem = remarks;
+			}
+			transaction.setRemarks(rem);
 			
 			transactionRepository.save(transaction);
     }
@@ -260,73 +270,68 @@ public class TransactionServiceImpl implements TransactionService{
 
         return transactionPage.map(tx -> {
 
-            GetAllTransactionsDto dto =
-                    new GetAllTransactionsDto();
+            GetAllTransactionsDto dto = new GetAllTransactionsDto();
 
             dto.setAmount(tx.getAmount());
-
             dto.setReferenceNumber(tx.getReferenceNumber());
-
             dto.setRemarks(tx.getRemarks());
-
             dto.setTransactionStatus(tx.getStatus());
-
+            dto.setStatus(tx.getStatus());
             dto.setTransactionDateTime(tx.getTransactionDateTime());
-
             dto.setTransactionType(tx.getTransactionType());
 
+            // Build sender name & account
+            String fromAcc = tx.getFromAccount() != null ? tx.getFromAccount().getAccountNumber() : "CASH / TREASURY";
+            String fromName = "Branch Cash Desk";
+            if (tx.getFromAccount() != null && tx.getFromAccount().getCustomer() != null) {
+                String fn = tx.getFromAccount().getCustomer().getFirstName() != null ? tx.getFromAccount().getCustomer().getFirstName() : "";
+                String ln = tx.getFromAccount().getCustomer().getLastName() != null ? tx.getFromAccount().getCustomer().getLastName() : "";
+                fromName = (fn + " " + ln).trim();
+                if (fromName.isEmpty()) fromName = "Customer #" + tx.getFromAccount().getCustomer().getCustomerId();
+            }
+
+            // Build receiver name & account
+            String toAcc = tx.getToAccount() != null ? tx.getToAccount().getAccountNumber() : "CASH / WITHDRAWAL";
+            String toName = "Cash Payout";
+            if (tx.getToAccount() != null && tx.getToAccount().getCustomer() != null) {
+                String fn = tx.getToAccount().getCustomer().getFirstName() != null ? tx.getToAccount().getCustomer().getFirstName() : "";
+                String ln = tx.getToAccount().getCustomer().getLastName() != null ? tx.getToAccount().getCustomer().getLastName() : "";
+                toName = (fn + " " + ln).trim();
+                if (toName.isEmpty()) toName = "Customer #" + tx.getToAccount().getCustomer().getCustomerId();
+            }
+
+            dto.setFromAccountNumber(fromAcc);
+            dto.setFromAccountHolderName(fromName);
+            dto.setToAccountNumber(toAcc);
+            dto.setToAccountHolderName(toName);
+
             /*
-             * Determine CREDIT / DEBIT
+             * Determine CREDIT / DEBIT from perspective of logged-in customer
              */
-            if (tx.getFromAccount() != null &&
-                    tx.getFromAccount().getCustomer().equals(customer)) {
+            boolean isDebitFlow = tx.getFromAccount() != null && tx.getFromAccount().getCustomer() != null
+                    && tx.getFromAccount().getCustomer().getCustomerId().equals(customer.getCustomerId());
 
+            if (isDebitFlow) {
                 dto.setNature(TransactionNature.DEBIT);
-
                 if (tx.getToAccount() != null) {
-
-                    dto.setCounterPartyName(
-                            tx.getToAccount()
-                                    .getCustomer()
-                                    .getFirstName());
-
-                    dto.setCounterPartyAccountNumber(
-                            tx.getToAccount()
-                                    .getAccountNumber());
-
+                    dto.setCounterPartyName(toName);
+                    dto.setCounterPartyAccountNumber(toAcc);
                 } else {
-
                     dto.setCounterPartyName("Cash Withdrawal");
                     dto.setCounterPartyAccountNumber("-");
-
                 }
-
             } else {
-
                 dto.setNature(TransactionNature.CREDIT);
-
                 if (tx.getFromAccount() != null) {
-
-                    dto.setCounterPartyName(
-                            tx.getFromAccount()
-                                    .getCustomer()
-                                    .getFirstName());
-
-                    dto.setCounterPartyAccountNumber(
-                            tx.getFromAccount()
-                                    .getAccountNumber());
-
+                    dto.setCounterPartyName(fromName);
+                    dto.setCounterPartyAccountNumber(fromAcc);
                 } else {
-
                     dto.setCounterPartyName("Cash Deposit");
                     dto.setCounterPartyAccountNumber("-");
-
                 }
-
             }
 
             return dto;
-
         });
 
     }

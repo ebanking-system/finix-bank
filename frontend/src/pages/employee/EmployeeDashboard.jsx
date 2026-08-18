@@ -39,7 +39,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9090
 
 const getDocumentFileUrl = (customerId, filePath) => {
   if (!filePath || !customerId) return null;
-  const fileName = filePath.replace(/\\/g, '/').split('/').pop();
+  if (typeof filePath === 'string' && (filePath.startsWith('http://') || filePath.startsWith('https://'))) {
+    return filePath;
+  }
+  const fileName = String(filePath).replace(/\\/g, '/').split('/').pop();
   return `${API_BASE_URL}/api/kyc/files/${customerId}/${fileName}`;
 };
 
@@ -434,9 +437,9 @@ const EmployeeDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pendingKycList.map((kyc) => {
                     const kId = kyc.id || kyc.kycId;
-                    const aadhaarUrl = getDocumentFileUrl(kyc.customerId, kyc.aadharDocPath);
-                    const panUrl = getDocumentFileUrl(kyc.customerId, kyc.panDocPath);
-                    const selfieUrl = getDocumentFileUrl(kyc.customerId, kyc.selfieDocPath);
+                    const aadhaarUrl = getDocumentFileUrl(kyc.customerId, kyc.aadharFile || kyc.aadharDocPath);
+                    const panUrl = getDocumentFileUrl(kyc.customerId, kyc.panFile || kyc.panDocPath);
+                    const selfieUrl = getDocumentFileUrl(kyc.customerId, kyc.selfieFile || kyc.selfImage || kyc.selfieDocPath);
 
                     return (
                       <Card
@@ -628,9 +631,9 @@ const EmployeeDashboard = () => {
                       {filteredKycList.map((k) => {
                         const kId = k.id || k.kycId;
                         const status = (k.status || 'PENDING').toUpperCase();
-                        const aadhaarUrl = getDocumentFileUrl(k.customerId, k.aadharDocPath);
-                        const panUrl = getDocumentFileUrl(k.customerId, k.panDocPath);
-                        const selfieUrl = getDocumentFileUrl(k.customerId, k.selfieDocPath);
+                        const aadhaarUrl = getDocumentFileUrl(k.customerId, k.aadharFile || k.aadharDocPath);
+                        const panUrl = getDocumentFileUrl(k.customerId, k.panFile || k.panDocPath);
+                        const selfieUrl = getDocumentFileUrl(k.customerId, k.selfieFile || k.selfImage || k.selfieDocPath);
 
                         return (
                           <tr key={kId} className="hover:bg-slate-50/80 transition-colors">
